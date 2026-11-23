@@ -1,0 +1,37 @@
+route_id,line_name,line_type,from_station,to_station,distance_km,base_time_mins,base_frequency_mins
+R01,Metro Red Line (North-South),Metro,S08,S07,1.8,3,5
+R02,Metro Red Line (North-South),Metro,S07,S06,4.5,6,5
+R03,Metro Red Line (North-South),Metro,S06,S05,5.2,7,5
+R04,Metro Red Line (North-South),Metro,S05,S02,4.0,5,5
+R05,Metro Red Line (North-South),Metro,S02,S04,2.5,4,4
+R06,Metro Red Line (North-South),Metro,S04,S01,1.8,3,4
+R07,Metro Red Line (North-South),Metro,S01,S03,1.5,2,4
+R08,Metro Red Line (North-South),Metro,S08,S07,1.8,3,5
+R09,Metro Blue Line (East-West),Metro,S01,S12,6.8,9,5
+R10,Metro Blue Line (East-West),Metro,S12,S11,4.2,6,6
+R11,Metro Blue Line (East-West),Metro,S11,S10,3.5,5,6
+R12,Metro Blue Line (East-West),Metro,S10,S09,3.0,4,6
+R13,Metro Blue Line (East-West),Metro,S12,S14,4.5,6,5
+R14,Metro Blue Line (East-West),Metro,S14,S16,2.2,3,5
+R15,Metro Blue Line (East-West),Metro,S16,S17,2.0,3,5
+R16,Metro Green Line (Loop & Cultural),Metro,S03,S18,2.4,4,6
+R17,Metro Green Line (Loop & Cultural),Metro,S18,S15,4.1,6,7
+R18,Metro Green Line (Loop & Cultural),Metro,S15,S14,3.8,5,6
+R19,Metro Green Line (Loop & Cultural),Metro,S14,S13,2.6,4,6
+R20,Metro Green Line (Loop & Cultural),Metro,S13,S12,2.8,4,6
+R21,Bus Route B1 (Express Transit),Bus,S01,S13,7.5,16,10
+R22,Bus Route B1 (Express Transit),Bus,S13,S11,5.0,11,10
+R23,Bus Route B1 (Express Transit),Bus,S11,S09,3.6,8,10
+R24,Bus Route B1 (Express Transit),Bus,S02,S01,2.8,7,8
+R25,Bus Route B2 (Suburban Feeder),Bus,S02,S04,2.5,8,12
+R26,Bus Route B2 (Suburban Feeder),Bus,S04,S18,3.2,10,12
+R27,Bus Route B2 (Suburban Feeder),Bus,S18,S20,4.0,12,12
+R28,Bus Route B2 (Suburban Feeder),Bus,S20,S16,5.1,14,12
+R29,Bus Route B2 (Suburban Feeder),Bus,S16,S14,2.5,7,12
+R30,Bus Route B3 (Heritage Circular),Bus,S05,S02,4.2,12,15
+R31,Bus Route B3 (Heritage Circular),Bus,S02,S18,3.5,10,15
+R32,Bus Route B3 (Heritage Circular),Bus,S18,S19,2.8,9,15
+R33,Bus Route B3 (Heritage Circular),Bus,S19,S20,3.4,11,15
+R34,Bus Route B3 (Heritage Circular),Bus,S20,S15,4.0,13,15
+R35,Bus Route B4 (Southern Express),Bus,S07,S10,9.0,18,15
+R36,Bus Route B4 (Southern Express),Bus,S10,S09,3.0,7,15

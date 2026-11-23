@@ -1,0 +1,45 @@
+# Configuration for Smart Public Transport Route and Crowd Prediction System
+project:
+  name: "smart-transport-crowd-prediction"
+  title: "Smart Public Transport Route and Crowd Prediction System"
+  seed: 42
+  authors:
+    - name: "Dhruvika Rawat"
+      roll: "LCB2025012"
+    - name: "Ganga Kaur"
+      roll: "LCI2025033"
+    - name: "Harshita Punia"
+      roll: "LCB2025011"
+    - name: "Ocean Kesarwani"
+      roll: "LCI2025019"
+  institution: "Indian Institute of Information Technology, Lucknow (IIITL)"
+  course: "CS201 Software Engineering"
+  deadline: "2026-11-25"
+
+data:
+  raw_path: "data/raw/ridership.csv"
+  processed_dir: "data/processed"
+  num_records: 60000
+  start_date: "2026-09-01"
+  end_date: "2026-11-20"
+  hours: [6, 22]
+  crowd_thresholds:
+    low_max: 0.40
+    medium_max: 0.75
+
+model:
+  artifact_path: "models/crowd_classifier.pkl"
+  test_size: 0.20
+  cv_folds: 5
+  random_state: 42
+  rf_param_grid:
+    n_estimators: [50, 100]
+    max_depth: [8, 14]
+
+routing:
+  default_lambda: 1.5
+  transfer_penalty: 4.0
+  crowd_penalty_map:
+    Low: 0
+    Medium: 1
+    High: 3
