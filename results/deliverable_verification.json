@@ -1,0 +1,19 @@
+{
+  "pdf_slides": 5,
+  "pptx_slides": 5,
+  "srs_pages": 15,
+  "secret_scan_findings": [],
+  "files": {
+    "docs/SRS.pdf": "b3830e08c504fa22d2d0280bf4701c7cd5dc4b1f9f4533acee0d360ef6f6bc42",
+    "docs/SRS.docx": "8f1fe4514d0f36c24347d34f208f3c09bcd260bf528e0ac5f3856b520bd600e5",
+    "docs/presentation.pptx": "5edb52890f2fcc4adb5ea2170ee14bd1183e92c49cb9bdf3f99c017e5e025c0f",
+    "docs/PPT.pdf": "22628a5bc8a97569261c26ae2f61ecb44d04ce06e59155ce1bacebb6881571ba",
+    "README.md": "5ace39c6eef32cb3f3db5fdecf1df8d4dfc52117f45b1f9da32f78fd1c276ed9",
+    "docs/VIVA_PREPARATION.md": "38c723db8a16bfeed5dd178654dc8ee520d23f47e11635ac7d2f8ac2a1e485d7",
+    "docs/DEMO_SCRIPT.md": "0fc8a86b9e5ba968269e022d7a0f5e68846fc0982d29e43384520fe309ae675d",
+    "results/routing_benchmark.csv": "59e6bce26ae31838eded74efe9d9c077953048d4874c4a196bd01d5c72e0be44",
+    "results/model_metrics.json": "b4fbd8c1ce5c1ca6f95b267637b46b7e4d302322d80799b9fd353413197a39c7",
+    "results/test_report.csv": "8779fcfbb3034eaef280507180d0dbf1c39b329215d164198f91a395e2f09bc0",
+    "results/coverage.json": "3cf9160578d29bd4399c9fc22203efd1b74252d3209ddc0cec26698932d02358"
+  }
+}

@@ -66,12 +66,12 @@ network=alt.Chart(pd.DataFrame(rows)).mark_line().encode(
     x=alt.X('longitude:Q',scale=alt.Scale(zero=False)),
     y=alt.Y('latitude:Q',scale=alt.Scale(zero=False)),
     detail='segment:N',order='order:Q',
-    color=alt.Color('route:N',scale=alt.Scale(domain=['Network','Baseline','Recommended'],range=['#cbd5e1','#2563eb','#059669'])),
+    color=alt.Color('route:N',legend=alt.Legend(orient='bottom'),scale=alt.Scale(domain=['Network','Baseline','Recommended'],range=['#cbd5e1','#2563eb','#059669'])),
     size=alt.condition(alt.datum.route=='Network',alt.value(1),alt.value(4)))
 points=stations.copy()
 points['Predicted congestion']=points.station_id.map(crowd)
 markers=alt.Chart(points).mark_circle(size=110).encode(
-    x='longitude:Q',y='latitude:Q',color=alt.Color('Predicted congestion:Q',scale=alt.Scale(domain=[0,.35,.7,1],range=['#245c52','#6a857b','#ba7229','#9d3020']),legend=alt.Legend(title='Congestion')),tooltip=['station_id','name',alt.Tooltip('Predicted congestion:Q',format='.3f')])
+    x='longitude:Q',y='latitude:Q',color=alt.Color('Predicted congestion:Q',scale=alt.Scale(domain=[0,.35,.7,1],range=['#245c52','#6a857b','#ba7229','#9d3020']),legend=alt.Legend(title='Congestion',orient='bottom')),tooltip=['station_id','name',alt.Tooltip('Predicted congestion:Q',format='.3f')])
 st.altair_chart((network+markers).resolve_scale(color='independent').properties(height=520).interactive(),use_container_width=True)
 st.caption('Pan, zoom and hover station markers. This schematic uses illustrative coordinates and works offline once dependencies are installed.')
 

@@ -46,4 +46,4 @@ _______________ coverage: platform win32, python 3.11.0-final-0 _______________
 
 Coverage JSON written to file results/coverage.json
 Required test coverage of 90% reached. Total coverage: 94.02%
-74 passed, 3 warnings in 18.87s
+74 passed, 3 warnings in 17.25s
