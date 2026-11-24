@@ -137,3 +137,23 @@ The modular ingestion and feature interfaces could be adapted to validated topol
 ## 34. What results should we quote?
 
 Quote the saved held-out metrics (MAE 0.008378, RMSE 0.012473, R² 0.973181) and full-grid outcomes (4.02% improved, 0.31% worse). Identify the 20.435% demo as a selected scenario.
+
+## Further examiner questions
+
+### What does Random Forest average, and why does that help?
+Each regression tree predicts a congestion number. The forest averages tree predictions. Bootstrap samples and random feature subsets diversify the trees, reducing the variance of one tree; they do not make synthetic data representative of reality.
+
+### Why did most benchmark itineraries remain unchanged?
+Many station predictions lie below the 0.35 zero-penalty boundary, and alternative routes may cost more time/transfers than their penalty savings. The grid also includes zero preference. Unchanged paths are expected outcomes, not missing calculations.
+
+### What is the difference between black-box and white-box testing?
+Black-box tests select input/output cases from the specification without relying on internal code, such as unknown stations and boundary crowd values. White-box tests use knowledge of branches and state transitions, such as stale queue entries or transfer/no-transfer paths.
+
+### What do statement and branch coverage mean?
+Statement coverage records executable lines reached; branch coverage records alternatives taken at decisions. Neither guarantees correctness. Here independent NetworkX comparisons and numerical expectations provide evidence beyond execution counts. The denominator excludes UI/build scripts and legacy code.
+
+### What does the Requirements Traceability Matrix prove?
+It maps each numbered functional requirement to its acceptance evidence, so omissions can be found and change impact assessed. It does not prove a requirement is correct or exhaustive merely because a test is listed.
+
+### Why can high test R-squared coexist with weak routing improvements?
+Prediction estimates this simulator accurately, but the routing benefit depends on available detours, crowd distributions, thresholds and weights. A predictive score does not imply routes will change or that real commuters benefit.

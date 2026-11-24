@@ -160,3 +160,7 @@ Small synthetic network and patterns, mostly below the high-congestion threshold
 The Streamlit transit workbench applies [Hallmark](https://github.com/nutlope/hallmark) custom design principles (Together AI, MIT). The large network leads the comparison; journey controls, congestion colours and keyboard focus use a restrained civic palette. [Design and compatibility notes](docs/FRONTEND_DESIGN.md).
 
 ![Verified application](docs/figures/dashboard_comparison.png)
+
+## Submission and hosting
+
+[Final submission checklist](docs/SUBMISSION_CHECKLIST.md) maps every professor requirement to evidence. [Streamlit Community Cloud instructions](docs/CLOUD_DEPLOYMENT.md) specify the original main branch, src/ui/app.py and Python 3.11. Public deployment requires a signed-in cloud account; no unverified public URL is claimed.
