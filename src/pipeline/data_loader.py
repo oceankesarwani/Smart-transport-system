@@ -5,7 +5,7 @@ Ensures strict schema validation, type integrity, and bidirectional route constr
 import os
 import pandas as pd
 from typing import Tuple, Dict, Any
-from SRC.config import STATIONS_FILE, ROUTES_FILE, HISTORICAL_CROWD_FILE
+from src.config import STATIONS_FILE, ROUTES_FILE, HISTORICAL_CROWD_FILE
 
 REQUIRED_STATION_COLS = ["station_id", "name", "latitude", "longitude", "capacity", "is_interchange"]
 REQUIRED_ROUTE_COLS = ["route_id", "line_name", "line_type", "from_station", "to_station", "distance_km", "base_time_mins"]

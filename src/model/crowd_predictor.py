@@ -11,7 +11,7 @@ from typing import Dict, List, Any, Tuple
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import Ridge
 from sklearn.metrics import root_mean_squared_error, mean_absolute_error, r2_score
-from SRC.config import MODEL_FILE
+from src.config import MODEL_FILE
 
 class CrowdPredictor:
     def __init__(self):

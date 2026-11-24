@@ -5,7 +5,7 @@ Constructs a NetworkX MultiDiGraph representing stations, rail/bus corridors, an
 import networkx as nx
 import pandas as pd
 from typing import Dict, Any
-from SRC.pipeline.data_loader import DataLoader
+from src.pipeline.data_loader import DataLoader
 
 class TransitGraphBuilder:
     @staticmethod

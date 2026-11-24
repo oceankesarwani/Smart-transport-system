@@ -6,9 +6,9 @@ Outputs route itinerary, crowd exposure analysis, and performance delta.
 import heapq
 import networkx as nx
 from typing import Dict, List, Any, Optional, Tuple
-from SRC.routing.graph_builder import TransitGraphBuilder
-from SRC.routing.cost_functions import calculate_edge_cost, compute_congestion_penalty
-from SRC.config import WEIGHT_TIME, WEIGHT_CROWD, WEIGHT_TRANSFER
+from src.routing.graph_builder import TransitGraphBuilder
+from src.routing.cost_functions import calculate_edge_cost, compute_congestion_penalty
+from src.config import WEIGHT_TIME, WEIGHT_CROWD, WEIGHT_TRANSFER
 
 class SmartTransitRouter:
     def __init__(self, graph: Optional[nx.MultiDiGraph] = None):

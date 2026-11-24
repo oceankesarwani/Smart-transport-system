@@ -6,7 +6,7 @@ from pathlib import Path
 # Base Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-SRC_DIR = BASE_DIR / "SRC"
+SRC_DIR = BASE_DIR / "src"
 MODELS_DIR = SRC_DIR / "model" / "artifacts"
 DOCS_DIR = BASE_DIR / "docs"
 
