@@ -1,0 +1,31 @@
+/* Hallmark · theme: custom · shape: app screen · redesign: full · idea: compare station exposure on a transit workbench · vibe: clear civic wayfinding with measured tradeoffs · posture: restrained · axes: light/system-sans/warm · scope: app */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V3 · weakest: V, retained native Streamlit controls for reliable keyboard interaction */
+:root {
+ --transit-paper: #f8faf9; --transit-ink: #203c39; --transit-muted: #47615c;
+ --transit-line: #c3d2cd; --transit-panel: #e9f0ed; --transit-accent: #a43d20;
+ --transit-focus: #a43d20; --transit-font: 'Segoe UI', 'Helvetica Neue', sans-serif;
+}
+html, body { overflow-x: clip; }
+.stApp { background: var(--transit-paper); color: var(--transit-ink); font-family: var(--transit-font); }
+.stApp h1, .stApp h2, .stApp h3 { font-family: var(--transit-font); color: var(--transit-ink); overflow-wrap: break-word; min-width: 0; }
+.stApp h1 { font-size: 2.2rem; font-weight: 650; letter-spacing: -.035em; }
+.stApp h2 { font-size: 1.55rem; }
+.stApp h3 { font-size: 1.2rem; }
+.main .block-container { max-width: 1440px; padding-top: 2rem; padding-bottom: 3rem; }
+[data-testid='stSidebar'] { background: var(--transit-panel); border-right: 1px solid var(--transit-line); }
+[data-testid='stSidebar'] .block-container { padding-top: 2rem; }
+[data-testid='stMetric'] { border-top: 2px solid var(--transit-line); padding: .8rem 0; }
+[data-testid='stMetricValue'] { font-variant-numeric: tabular-nums; color: var(--transit-ink); font-size: 2rem; }
+[data-testid='stCaptionContainer'] { color: var(--transit-muted); }
+.stApp [data-baseweb='select'] > div, .stApp button { border-radius: 3px; }
+.stApp :is(button,input,select,textarea,[tabindex]):focus-visible { outline: 3px solid var(--transit-focus); outline-offset: 3px; }
+[data-testid='stAlert'] { border-radius: 3px; }
+@media(max-width: 760px) {
+ .main .block-container { padding: 1rem; }
+ .stApp h1 { font-size: 1.7rem; }
+ [data-testid='stHorizontalBlock'] { flex-wrap: wrap; }
+ [data-testid='column'] { min-width: min(100%, 280px); flex: 1 1 100%; }
+}
+@media(prefers-reduced-motion: reduce) { .stApp *, .stApp *::before, .stApp *::after { animation: none !important; transition: none !important; } }
+.stApp button:active { background: var(--transit-panel); }
+.stApp h1, .stApp h2 { text-wrap: balance; }

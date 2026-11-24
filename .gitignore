@@ -42,3 +42,7 @@ coverage.xml
 !results/coverage.json
 node_modules/
 .codex-finalizer/
+
+.hallmark/before/
+.hallmark/after/
+.hallmark/*.html

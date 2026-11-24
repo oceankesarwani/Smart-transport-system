@@ -1,0 +1,7 @@
+# Hallmark frontend redesign
+
+Design reference: Hallmark by Together AI, https://github.com/nutlope/hallmark (MIT). Installed with npx skills add nutlope/hallmark -g --agent codex. README, SKILL.md, custom direction, redesign and app-screen guidance were read. Custom civic transit workbench: larger live network first, retained journey sidebar, measured comparison below; cool paper, dark green ink, rust focus/selection, system typography and restrained square surfaces. All controls, errors, simulation disclosure, model and comparison calculations remain intact. No new backend or external services.
+
+Files: src/ui/app.py, src/ui/tokens.css and .streamlit/config.toml. No components deleted. The map's markers encode actual predicted congestion; route lines remain distinct. Native Streamlit loading and model recovery states remain; native responsive sidebar and wrapping columns support mobile. Existing screenshots are genuine application captures.
+
+Hallmark static lint was attempted on the Streamlit app. It sees no static HTML in Python, and its render tier lacks puppeteer-core. A zero-file lint result is not a frontend pass. Real Playwright desktop/mobile checks and the application's AppTest suite provide the framework-compatible review. Fresh-context review is performed in-thread under Hallmark's Codex harness guidance. Full Hallmark HTML scaffold is inapplicable to Streamlit's generated DOM; its design principles are applied manually as authorized.

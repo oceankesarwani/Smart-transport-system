@@ -154,3 +154,9 @@ legacy/            preserved alternative source, tests and old artifacts
 ## Limitations
 
 Small synthetic network and patterns, mostly below the high-congestion threshold; no operational generalization shown. Scenario weather/events are assumptions. The model does not consider timetables, changing crowd along the trip, capacity constraints or missed boarding. Preference has no maximum-detour guarantee. The objective differs from mean exposure, and adverse cases are reported. Meaningful deployment requires observed data, calibrated penalties and external validation. This is custom numerical prediction and graph search, with no LLM or ChatGPT API.
+
+## Frontend design
+
+The Streamlit transit workbench applies [Hallmark](https://github.com/nutlope/hallmark) custom design principles (Together AI, MIT). The large network leads the comparison; journey controls, congestion colours and keyboard focus use a restrained civic palette. [Design and compatibility notes](docs/FRONTEND_DESIGN.md).
+
+![Verified application](docs/figures/dashboard_comparison.png)

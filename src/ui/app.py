@@ -4,13 +4,13 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 import altair as alt
 from src.pipeline.data_loader import DataLoader
 from src.model.crowd_predictor import CrowdPredictor
 from src.routing.router import SmartTransitRouter
 
 st.set_page_config(page_title='Crowd-aware transport',layout='wide')
+st.markdown('<style>'+Path(__file__).with_name('tokens.css').read_text(encoding='utf-8')+'</style>',unsafe_allow_html=True)
 st.title('Smart Public Transport System')
 st.subheader('Crowd-Aware Route Optimization')
 st.info('SIMULATION: fictional transit lines inspired by Lucknow. Historical data is synthetically generated. Congestion is predicted, not live sensor data. No seating guarantee.')
@@ -50,24 +50,6 @@ except ValueError as exc:
 
 base,smart=result['naive_route'],result['smart_route']
 a=result['analytics']
-col1,col2,col3=st.columns(3)
-col1.metric('Signed exposure reduction',f"{a['crowd_reduction_percent']:+.2f}%")
-col2.metric('Travel-time trade-off',f"{a['travel_time_delta_mins']:+.1f} min")
-col3.metric('High-congestion stations avoided',str(a['bottlenecks_avoided']))
-if not a['is_different_path']:
-    st.success('Both methods recommend the same itinerary. No alternative has a lower weighted cost for this preference.')
-else:
-    st.write(f"The recommendation minimizes travel minutes plus an assumed crowd discomfort penalty. It changes average station exposure from {base['avg_congestion']:.3f} to {smart['avg_congestion']:.3f}, with {a['travel_time_delta_mins']:+.1f} minutes of extra travel. This optimizes a weighted sum, so average exposure need not improve in every case.")
-for col,route,title in zip(st.columns(2),[base,smart],['Conventional baseline','Crowd-aware recommendation']):
-    with col:
-        st.subheader(title)
-        st.write(' → '.join(route['station_names']))
-        st.metric('Estimated duration',f"{route['total_time_mins']:.1f} min")
-        st.caption(f"In vehicle: {route['in_vehicle_time_mins']:.1f} min; transfers: {route['transfer_time_mins']:.1f} min")
-        st.write(f"Transfers: **{route['transfers']}** · Average congestion: **{route['avg_congestion']:.3f}** · Maximum: **{route['max_congestion']:.3f}** · High stations (≥0.70): **{len(route['bottlenecks'])}**")
-        if route['segments']:
-            st.dataframe(pd.DataFrame(route['segments'])[['from_station','to_station','line_name','base_time_mins','dest_crowd']],hide_index=True,use_container_width=True)
-
 st.subheader('Interactive simulated network')
 st.caption('Blue: baseline. Green: recommendation. Gray: simulated network connections.')
 coords={r.station_id:(r.longitude,r.latitude) for r in stations.itertuples()}
@@ -88,10 +70,30 @@ network=alt.Chart(pd.DataFrame(rows)).mark_line().encode(
     size=alt.condition(alt.datum.route=='Network',alt.value(1),alt.value(4)))
 points=stations.copy()
 points['Predicted congestion']=points.station_id.map(crowd)
-markers=alt.Chart(points).mark_circle(size=90,color='#0f172a').encode(
-    x='longitude:Q',y='latitude:Q',tooltip=['station_id','name',alt.Tooltip('Predicted congestion:Q',format='.3f')])
-st.altair_chart((network+markers).properties(height=450).interactive(),use_container_width=True)
+markers=alt.Chart(points).mark_circle(size=110).encode(
+    x='longitude:Q',y='latitude:Q',color=alt.Color('Predicted congestion:Q',scale=alt.Scale(domain=[0,.35,.7,1],range=['#245c52','#6a857b','#ba7229','#9d3020']),legend=alt.Legend(title='Congestion')),tooltip=['station_id','name',alt.Tooltip('Predicted congestion:Q',format='.3f')])
+st.altair_chart((network+markers).resolve_scale(color='independent').properties(height=520).interactive(),use_container_width=True)
 st.caption('Pan, zoom and hover station markers. This schematic uses illustrative coordinates and works offline once dependencies are installed.')
+
+st.subheader('Compare itineraries')
+col1,col2,col3=st.columns(3)
+col1.metric('Signed exposure reduction',f"{a['crowd_reduction_percent']:+.2f}%")
+col2.metric('Travel-time trade-off',f"{a['travel_time_delta_mins']:+.1f} min")
+col3.metric('High-congestion stations avoided',str(a['bottlenecks_avoided']))
+if not a['is_different_path']:
+    st.success('Both methods recommend the same itinerary. No alternative has a lower weighted cost for this preference.')
+else:
+    st.write(f"The recommendation minimizes travel minutes plus an assumed crowd discomfort penalty. It changes average station exposure from {base['avg_congestion']:.3f} to {smart['avg_congestion']:.3f}, with {a['travel_time_delta_mins']:+.1f} minutes of extra travel. This optimizes a weighted sum, so average exposure need not improve in every case.")
+for col,route,title in zip(st.columns(2),[base,smart],['Conventional baseline','Crowd-aware recommendation']):
+    with col:
+        st.subheader(title)
+        st.write(' → '.join(route['station_names']))
+        st.metric('Estimated duration',f"{route['total_time_mins']:.1f} min")
+        st.caption(f"In vehicle: {route['in_vehicle_time_mins']:.1f} min; transfers: {route['transfer_time_mins']:.1f} min")
+        st.write(f"Transfers: **{route['transfers']}** · Average congestion: **{route['avg_congestion']:.3f}** · Maximum: **{route['max_congestion']:.3f}** · High stations (≥0.70): **{len(route['bottlenecks'])}**")
+        if route['segments']:
+            st.dataframe(pd.DataFrame(route['segments'])[['from_station','to_station','line_name','base_time_mins','dest_crowd']],hide_index=True,use_container_width=True)
+
 st.subheader('Predicted station congestion')
 frame=pd.DataFrame({'Station':ids,'Predicted congestion':[crowd[s] for s in ids]})
 st.bar_chart(frame.set_index('Station'))
