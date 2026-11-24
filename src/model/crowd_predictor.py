@@ -1,175 +1,142 @@
-"""
-Crowd Predictor Module
-Implements cyclical feature engineering and Gradient Boosting / Random Forest regression
-to predict platform and vehicle congestion index [0.0 - 1.0].
-"""
-import os
+"""Deterministic scenario features and validation-selected congestion regression."""
+from pathlib import Path
+import platform
 import joblib
+import sklearn
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Any, Tuple
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.dummy import DummyRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import Ridge
-from sklearn.metrics import root_mean_squared_error, mean_absolute_error, r2_score
-from SRC.config import MODEL_FILE
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from src.config import MODEL_FILE
+
+
+def chronological_split(df):
+    df = df.sort_values(['timestamp', 'station_id']).reset_index(drop=True)
+    dates = pd.to_datetime(df.timestamp).dt.normalize().unique()
+    if len(dates) < 5:
+        raise ValueError('At least five days required for chronological splits')
+    a, b = int(len(dates)*.6), int(len(dates)*.8)
+    day = pd.to_datetime(df.timestamp).dt.normalize()
+    return df[day < dates[a]], df[(day >= dates[a]) & (day < dates[b])], df[day >= dates[b]]
+
+
+def regression_metrics(actual, predicted):
+    return {'MAE': float(mean_absolute_error(actual, predicted)),
+            'RMSE': float(np.sqrt(mean_squared_error(actual, predicted))),
+            'R2': float(r2_score(actual, predicted))}
+
 
 class CrowdPredictor:
     def __init__(self):
         self.model = None
-        self.feature_columns: List[str] = []
-        self.station_encoder: Dict[str, int] = {}
-        self.weather_mapping = {"Clear": 0, "Rain": 1, "Storm": 2}
-        self.metrics: Dict[str, float] = {}
+        self.station_encoder = {}
+        self.feature_columns = []
+        self.metrics = {}
 
-    def _engineer_features(self, df: pd.DataFrame, fit_encoder: bool = False) -> pd.DataFrame:
+    def _engineer_features(self, df, fit_encoder=False):
         df = df.copy()
-
-        # Cyclical Hour encoding (preserves 23:00 -> 00:00 continuity)
-        df["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24.0)
-        df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24.0)
-
-        # Cyclical Day of Week encoding (preserves Sunday -> Monday continuity)
-        df["day_sin"] = np.sin(2 * np.pi * df["day_of_week"] / 7.0)
-        df["day_cos"] = np.cos(2 * np.pi * df["day_of_week"] / 7.0)
-
-        # Weather numeric encoding
-        if "weather" in df.columns:
-            df["weather_code"] = df["weather"].map(self.weather_mapping).fillna(0).astype(int)
-        else:
-            df["weather_code"] = 0
-
-        # Special event and peak indicators
-        if "special_event" not in df.columns:
-            df["special_event"] = 0
-        if "is_weekend" not in df.columns:
-            df["is_weekend"] = (df["day_of_week"] >= 5).astype(int)
-        if "is_peak" not in df.columns:
-            df["is_peak"] = df["hour"].apply(lambda h: 1 if (8 <= h <= 10 or 17 <= h <= 20) else 0)
-
-        # One-Hot Encoding for Station IDs
         if fit_encoder:
-            unique_stations = sorted(df["station_id"].unique())
-            self.station_encoder = {st: idx for idx, st in enumerate(unique_stations)}
+            self.station_encoder = {s:i for i,s in enumerate(sorted(df.station_id.unique()))}
+        if not self.station_encoder or not set(df.station_id).issubset(self.station_encoder):
+            raise ValueError('Unknown station or missing fitted station encoder')
+        for col, lo, hi in [('hour',0,23), ('day_of_week',0,6)]:
+            values = pd.to_numeric(df[col], errors='raise')
+            if not values.between(lo,hi).all() or not np.isfinite(values).all():
+                raise ValueError(f'Invalid {col}')
+        if not (df.day_of_week % 1 == 0).all():
+            raise ValueError('Day of week must be an integer')
+        if 'weather' not in df:
+            df['weather'] = 'Clear'
+        if not df.weather.isin(['Clear','Rain','Storm']).all():
+            raise ValueError('Invalid weather')
+        if 'special_event' not in df:
+            df['special_event'] = 0
+        if not df.special_event.isin([0,1]).all():
+            raise ValueError('Invalid special_event')
+        x = pd.DataFrame(index=df.index)
+        for name, period in [('hour',24),('day_of_week',7)]:
+            x[name+'_sin'] = np.sin(2*np.pi*df[name]/period)
+            x[name+'_cos'] = np.cos(2*np.pi*df[name]/period)
+        x['is_weekend'] = (df.day_of_week >= 5).astype(int)
+        # Derived identically in training and inference; ignore stored proxy flags.
+        x['is_peak'] = (df.hour.between(8,10) | df.hour.between(17,20)).astype(int)
+        x['special_event'] = df.special_event
+        for w in ['Clear','Rain','Storm']:
+            x['weather_'+w] = (df.weather == w).astype(int)
+        for s in self.station_encoder:
+            x['st_'+s] = (df.station_id == s).astype(int)
+        self.feature_columns = list(x.columns)
+        return x
 
-        # Create one-hot columns for stations
-        for st in self.station_encoder:
-            df[f"st_{st}"] = (df["station_id"] == st).astype(int)
-
-        base_features = [
-            "hour_sin", "hour_cos", "day_sin", "day_cos",
-            "is_weekend", "is_peak", "weather_code", "special_event"
-        ]
-        station_features = [f"st_{st}" for st in self.station_encoder]
-        self.feature_columns = base_features + station_features
-
-        return df[self.feature_columns]
-
-    def train_and_evaluate(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> Dict[str, Any]:
-        """Trains multiple regressors, compares them, and selects the optimal model."""
-        X_train = self._engineer_features(train_df, fit_encoder=True)
-        y_train = train_df["congestion_index"].values
-
-        X_test = self._engineer_features(test_df, fit_encoder=False)
-        y_test = test_df["congestion_index"].values
-
-        # Model benchmark dictionary
-        candidate_models = {
-            "Ridge Regression (Linear Baseline)": Ridge(alpha=1.0),
-            "Random Forest Regressor (Tree Baseline)": RandomForestRegressor(n_estimators=60, max_depth=12, random_state=42, n_jobs=-1),
-            "Gradient Boosting Regressor (Production SOTA)": GradientBoostingRegressor(n_estimators=100, learning_rate=0.08, max_depth=6, random_state=42)
+    def train_and_evaluate(self, train_df, validation_df, test_df=None):
+        # Legacy two-frame callers split their training period again, keeping the supplied final test untouched.
+        if test_df is None:
+            test_df = validation_df
+            dates = pd.to_datetime(train_df.timestamp).dt.normalize()
+            boundary = sorted(dates.unique())[int(len(dates.unique())*.8)]
+            validation_df, train_df = train_df[dates >= boundary], train_df[dates < boundary]
+        xt = self._engineer_features(train_df, True)
+        xv = self._engineer_features(validation_df)
+        candidates = {
+            'Historical mean': DummyRegressor(strategy='mean'),
+            'Ridge': Ridge(alpha=1),
+            'Random Forest': RandomForestRegressor(n_estimators=80,max_depth=14,random_state=42,n_jobs=1),
+            'Gradient Boosting': GradientBoostingRegressor(n_estimators=140,learning_rate=.08,max_depth=4,random_state=42)
         }
-
-        benchmark_results = {}
-        best_r2 = -float("inf")
-        best_name = None
-
-        for name, model_instance in candidate_models.items():
-            model_instance.fit(X_train, y_train)
-            preds = model_instance.predict(X_test)
-            preds = np.clip(preds, 0.0, 1.0)
-
-            rmse = float(root_mean_squared_error(y_test, preds))
-            mae = float(mean_absolute_error(y_test, preds))
-            r2 = float(r2_score(y_test, preds))
-            # Mean Absolute Percentage Error (avoid division by 0)
-            mape = float(np.mean(np.abs((y_test - preds) / np.maximum(y_test, 0.05))) * 100.0)
-
-            benchmark_results[name] = {
-                "RMSE": round(rmse, 4),
-                "MAE": round(mae, 4),
-                "R2": round(r2, 4),
-                "MAPE_percent": round(mape, 2)
-            }
-
-            if r2 > best_r2:
-                best_r2 = r2
-                best_name = name
-                self.model = model_instance
-
-        self.metrics = benchmark_results[best_name]
-        self.metrics["best_model_name"] = best_name
-        self.metrics["all_benchmarks"] = benchmark_results
-
+        validation = {}
+        for name, model in candidates.items():
+            model.fit(xt, train_df.congestion_index)
+            validation[name] = regression_metrics(validation_df.congestion_index,np.clip(model.predict(xv),0,1))
+        selected = min(validation, key=lambda n: validation[n]['RMSE'])
+        self.model = candidates[selected]
+        # Refit selected architecture on train + validation, then evaluate once on held-out final dates.
+        development = pd.concat([train_df,validation_df])
+        self.model.fit(self._engineer_features(development),development.congestion_index)
+        test_predictions = np.clip(self.model.predict(self._engineer_features(test_df)),0,1)
+        self.metrics = regression_metrics(test_df.congestion_index,test_predictions)
+        self.metrics.update(best_model_name=selected, validation_benchmarks=validation,
+            splits={name:{'rows':len(frame),'start':str(frame.timestamp.min()),'end':str(frame.timestamp.max())}
+                    for name,frame in [('train',train_df),('validation',validation_df),('test',test_df)]},
+            python=platform.python_version(), sklearn=sklearn.__version__, seed=42)
         return self.metrics
 
-    def predict_single(self, station_id: str, hour: int, day_of_week: int = 1,
-                       weather: str = "Clear", special_event: int = 0) -> float:
-        """Predicts real-time congestion index for a single station."""
-        row = pd.DataFrame([{
-            "station_id": station_id,
-            "hour": hour,
-            "day_of_week": day_of_week,
-            "is_weekend": 1 if day_of_week >= 5 else 0,
-            "is_peak": 1 if (8 <= hour <= 10 or 17 <= hour <= 20) else 0,
-            "weather": weather,
-            "special_event": special_event
-        }])
-        X = self._engineer_features(row, fit_encoder=False)
-        pred = float(self.model.predict(X)[0])
-        return round(float(np.clip(pred, 0.0, 1.0)), 3)
+    def predict_network(self, station_ids, hour, day_of_week=1, weather='Clear', special_event=0):
+        if self.model is None:
+            raise ValueError('Model is not trained; run python -m src.model.train')
+        if not station_ids:
+            return {}
+        frame = pd.DataFrame({'station_id':station_ids,'hour':hour,'day_of_week':day_of_week,
+                              'weather':weather,'special_event':special_event})
+        preds = np.clip(self.model.predict(self._engineer_features(frame)),0,1)
+        if not np.isfinite(preds).all():
+            raise ValueError('Nonfinite model prediction')
+        return dict(zip(station_ids,map(float,preds)))
 
-    def predict_network(self, station_ids: List[str], hour: int, day_of_week: int = 1,
-                        weather: str = "Clear", special_event: int = 0) -> Dict[str, float]:
-        """Predicts congestion for all stations simultaneously."""
-        rows = [
-            {
-                "station_id": st,
-                "hour": hour,
-                "day_of_week": day_of_week,
-                "is_weekend": 1 if day_of_week >= 5 else 0,
-                "is_peak": 1 if (8 <= hour <= 10 or 17 <= hour <= 20) else 0,
-                "weather": weather,
-                "special_event": special_event
-            }
-            for st in station_ids
-        ]
-        df = pd.DataFrame(rows)
-        X = self._engineer_features(df, fit_encoder=False)
-        preds = self.model.predict(X)
-        preds = np.clip(preds, 0.0, 1.0)
-        return {st: round(float(p), 3) for st, p in zip(station_ids, preds)}
+    def predict_single(self, station_id, hour, day_of_week=1, weather='Clear', special_event=0):
+        return self.predict_network([station_id],hour,day_of_week,weather,special_event)[station_id]
 
-    def save(self, filepath: str = None) -> str:
-        path = filepath or MODEL_FILE
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        payload = {
-            "model": self.model,
-            "feature_columns": self.feature_columns,
-            "station_encoder": self.station_encoder,
-            "metrics": self.metrics
-        }
-        joblib.dump(payload, path)
+    def save(self, filepath=None):
+        if self.model is None:
+            raise ValueError('Cannot save untrained model')
+        path = Path(filepath or MODEL_FILE)
+        path.parent.mkdir(parents=True,exist_ok=True)
+        joblib.dump({'schema_version':2,'sklearn':sklearn.__version__,'predictor':self},path)
         return str(path)
 
     @classmethod
-    def load(cls, filepath: str = None) -> "CrowdPredictor":
-        path = filepath or MODEL_FILE
-        if not os.path.exists(path):
-            raise FileNotFoundError(f"Model file not found at: {path}")
-        payload = joblib.load(path)
-        predictor = cls()
-        predictor.model = payload["model"]
-        predictor.feature_columns = payload["feature_columns"]
-        predictor.station_encoder = payload["station_encoder"]
-        predictor.metrics = payload.get("metrics", {})
-        return predictor
+    def load(cls, filepath=None):
+        path = Path(filepath or MODEL_FILE)
+        if not path.exists():
+            raise FileNotFoundError(f'Model missing: {path}. Run python -m src.model.train')
+        try:
+            payload = joblib.load(path)
+            if payload.get('schema_version') != 2 or payload.get('sklearn') != sklearn.__version__:
+                raise ValueError('Model version incompatible')
+            predictor = payload['predictor']
+            if not isinstance(predictor,cls) or predictor.model is None:
+                raise ValueError('Invalid model payload')
+            return predictor
+        except Exception as exc:
+            raise ValueError('Model unavailable or incompatible. Run python -m src.model.train') from exc

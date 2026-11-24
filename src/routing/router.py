@@ -1,14 +1,14 @@
 """
 Smart Transit Router Engine
-Implements Naive Shortest Path (Standard Dijkstra) vs. Multi-Objective Crowd-Aware Pareto Search.
+Implements Naive Shortest Path (Standard Dijkstra) vs. weighted crowd-aware Dijkstra.
 Outputs route itinerary, crowd exposure analysis, and performance delta.
 """
 import heapq
 import networkx as nx
 from typing import Dict, List, Any, Optional, Tuple
-from SRC.routing.graph_builder import TransitGraphBuilder
-from SRC.routing.cost_functions import calculate_edge_cost, compute_congestion_penalty
-from SRC.config import WEIGHT_TIME, WEIGHT_CROWD, WEIGHT_TRANSFER
+from src.routing.graph_builder import TransitGraphBuilder
+from src.routing.cost_functions import calculate_edge_cost, compute_congestion_penalty, nonnegative
+from src.config import WEIGHT_TIME, WEIGHT_CROWD, WEIGHT_TRANSFER
 
 class SmartTransitRouter:
     def __init__(self, graph: Optional[nx.MultiDiGraph] = None):
@@ -26,7 +26,7 @@ class SmartTransitRouter:
             crowd_map=crowd_map,
             w_time=1.0,
             w_crowd=0.0,
-            w_transfer=1.5
+            w_transfer=WEIGHT_TRANSFER
         )
 
     def find_crowd_aware_route(
@@ -37,11 +37,11 @@ class SmartTransitRouter:
         comfort_preference: float = 1.0
     ) -> Optional[Dict[str, Any]]:
         """
-        Calculates crowd-optimized route using Multi-Objective Dijkstra.
+        Calculates crowd-optimized route using weighted Dijkstra.
         Penalizes overcrowded stations and balances commute duration with passenger comfort.
         comfort_preference (0.0 = Pure Speed, 1.0 = Balanced, 2.0 = Maximum Comfort/Low Crowds).
         """
-        w_crowd = WEIGHT_CROWD * max(0.1, comfort_preference)
+        w_crowd = WEIGHT_CROWD * nonnegative(comfort_preference, "comfort_preference")
         return self._search_path(
             origin=origin,
             destination=destination,
@@ -64,21 +64,17 @@ class SmartTransitRouter:
             raise ValueError(f"Origin station '{origin}' not found in network.")
         if destination not in self.graph:
             raise ValueError(f"Destination station '{destination}' not found in network.")
-        if origin == destination:
-            origin_name = self.graph.nodes[origin].get("name", origin)
-            return {
-                "route_type": "Identity",
-                "stations": [origin],
-                "station_names": [origin_name],
-                "total_time_mins": 0.0,
-                "effective_cost": 0.0,
-                "total_distance_km": 0.0,
-                "transfers": 0,
-                "avg_congestion": 0.0,
-                "max_congestion": 0.0,
-                "bottlenecks": [],
-                "segments": []
-            }
+        nonnegative(w_time, "weight_time")
+        nonnegative(w_crowd, "weight_crowd")
+        nonnegative(w_transfer, "transfer_minutes")
+        if crowd_map is not None:
+            if set(self.graph) - set(crowd_map):
+                raise ValueError("Crowd predictions required for every station")
+            for value in crowd_map.values():
+                compute_congestion_penalty(value)
+        for _, _, data in self.graph.edges(data=True):
+            nonnegative(data["base_time_mins"], "base_time")
+            nonnegative(data.get("distance_km", 0), "distance")
 
         # Priority Queue for Dijkstra: (cost, count, current_node, current_line, path_records)
         # Sequence counter prevents comparing dict elements in path_edges during tie breaks
@@ -148,7 +144,7 @@ class SmartTransitRouter:
         stations = [origin] + [e["to_station"] for e in path_edges]
         station_names = [self.graph.nodes[s].get("name", s) for s in stations]
 
-        total_time = sum(e["base_time_mins"] for e in path_edges)
+        in_vehicle_time = sum(e["base_time_mins"] for e in path_edges)
         total_dist = sum(e["distance_km"] for e in path_edges)
 
         transfers = 0
@@ -157,6 +153,9 @@ class SmartTransitRouter:
             if last_line is not None and e["line_name"] != last_line:
                 transfers += 1
             last_line = e["line_name"]
+
+        transfer_time = transfers * WEIGHT_TRANSFER
+        total_time = in_vehicle_time + transfer_time
 
         congestion_vals = [crowd_map.get(s, 0.2) for s in stations] if crowd_map else [0.2] * len(stations)
         avg_congestion = sum(congestion_vals) / len(congestion_vals)
@@ -173,12 +172,14 @@ class SmartTransitRouter:
             "destination": destination,
             "stations": stations,
             "station_names": station_names,
-            "total_time_mins": round(total_time, 1),
+            "total_time_mins": total_time,
+            "in_vehicle_time_mins": in_vehicle_time,
+            "transfer_time_mins": transfer_time,
             "total_distance_km": round(total_dist, 1),
             "transfers": transfers,
-            "effective_cost": round(effective_cost, 2),
-            "avg_congestion": round(avg_congestion, 3),
-            "max_congestion": round(max_congestion, 3),
+            "effective_cost": effective_cost,
+            "avg_congestion": avg_congestion,
+            "max_congestion": max_congestion,
             "bottlenecks": bottlenecks,
             "segments": path_edges
         }
@@ -200,7 +201,7 @@ class SmartTransitRouter:
         # Performance analytics
         crowd_reduction_pct = 0.0
         if naive["avg_congestion"] > 0:
-            crowd_reduction_pct = max(0.0, ((naive["avg_congestion"] - smart["avg_congestion"]) / naive["avg_congestion"]) * 100.0)
+            crowd_reduction_pct = ((naive["avg_congestion"] - smart["avg_congestion"]) / naive["avg_congestion"]) * 100.0
 
         bottlenecks_bypassed = len(naive["bottlenecks"]) - len(smart["bottlenecks"])
         time_difference_mins = round(smart["total_time_mins"] - naive["total_time_mins"], 1)
@@ -210,11 +211,11 @@ class SmartTransitRouter:
             "naive_route": naive,
             "smart_route": smart,
             "analytics": {
-                "crowd_reduction_percent": round(crowd_reduction_pct, 1),
-                "bottlenecks_avoided": max(0, bottlenecks_bypassed),
+                "crowd_reduction_percent": crowd_reduction_pct,
+                "bottlenecks_avoided": bottlenecks_bypassed,
                 "naive_bottlenecks_count": len(naive["bottlenecks"]),
                 "smart_bottlenecks_count": len(smart["bottlenecks"]),
                 "travel_time_delta_mins": time_difference_mins,
-                "is_different_path": naive["stations"] != smart["stations"]
+                "is_different_path": [(s["to_station"], s["line_name"]) for s in naive["segments"]] != [(s["to_station"], s["line_name"]) for s in smart["segments"]]
             }
         }

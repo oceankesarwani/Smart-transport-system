@@ -3,8 +3,8 @@ Unit Tests for DataLoader and Schema Integrity
 """
 import pytest
 import pandas as pd
-from SRC.pipeline.data_loader import DataLoader
-from SRC.config import STATIONS_FILE, ROUTES_FILE, HISTORICAL_CROWD_FILE
+from src.pipeline.data_loader import DataLoader
+from src.config import STATIONS_FILE, ROUTES_FILE, HISTORICAL_CROWD_FILE
 
 def test_load_stations():
     df = DataLoader.load_stations(str(STATIONS_FILE))

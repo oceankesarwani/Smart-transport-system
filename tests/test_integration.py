@@ -3,9 +3,9 @@ Integration Tests for End-to-End Pipeline
 Validates data ingestion -> model forecast -> graph routing -> comparative analytics
 """
 import pytest
-from SRC.pipeline.data_loader import DataLoader
-from SRC.model.crowd_predictor import CrowdPredictor
-from SRC.routing.router import SmartTransitRouter
+from src.pipeline.data_loader import DataLoader
+from src.model.crowd_predictor import CrowdPredictor
+from src.routing.router import SmartTransitRouter
 
 def test_end_to_end_system_pipeline():
     # 1. Load components

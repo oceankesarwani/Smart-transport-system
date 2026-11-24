@@ -5,7 +5,7 @@ Constructs a NetworkX MultiDiGraph representing stations, rail/bus corridors, an
 import networkx as nx
 import pandas as pd
 from typing import Dict, Any
-from SRC.pipeline.data_loader import DataLoader
+from src.pipeline.data_loader import DataLoader
 
 class TransitGraphBuilder:
     @staticmethod
@@ -31,13 +31,15 @@ class TransitGraphBuilder:
                 longitude=float(row["longitude"]),
                 capacity=int(row["capacity"]),
                 is_interchange=int(row["is_interchange"]),
-                zone=str(row["zone"])
+                zone=str(row.get("zone", "Illustrative"))
             )
 
         # Add route edges
         for _, row in routes_df.iterrows():
             u = str(row["from_station"])
             v = str(row["to_station"])
+            if u not in G or v not in G:
+                raise ValueError("Route references unknown station")
             G.add_edge(
                 u, v,
                 key=str(row["route_id"]),

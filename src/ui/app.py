@@ -1,359 +1,99 @@
-"""
-Smart Public Transport Route and Crowd Prediction System
-Interactive Web Dashboard & Command Center (Streamlit)
-"""
-import os
+"""Submission dashboard. All values are simulation predictions, with no online dependencies."""
 import sys
 from pathlib import Path
-import streamlit as st
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 import pandas as pd
-import folium
+import streamlit as st
 import streamlit.components.v1 as components
+import altair as alt
+from src.pipeline.data_loader import DataLoader
+from src.model.crowd_predictor import CrowdPredictor
+from src.routing.router import SmartTransitRouter
 
-# Add project root to sys.path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-from SRC.pipeline.data_loader import DataLoader
-from SRC.model.crowd_predictor import CrowdPredictor
-from SRC.routing.router import SmartTransitRouter
-from SRC.config import MODEL_FILE, HISTORICAL_CROWD_FILE
-
-# Page configuration
-st.set_page_config(
-    page_title="Smart Public Transport System",
-    page_icon="🚇",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Custom CSS for modern styling
-st.markdown("""
-<style>
-    .metric-box {
-        background-color: #f8fafc;
-        border-radius: 8px;
-        padding: 16px;
-        border-left: 5px solid #2563eb;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: 12px;
-    }
-    .badge-green {
-        background-color: #dcfce7;
-        color: #15803d;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    .badge-red {
-        background-color: #fee2e2;
-        color: #b91c1c;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    .badge-yellow {
-        background-color: #fef9c3;
-        color: #a16207;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-</style>
-""", unsafe_allow_html=True)
+st.set_page_config(page_title='Crowd-aware transport',layout='wide')
+st.title('Smart Public Transport System')
+st.subheader('Crowd-Aware Route Optimization')
+st.info('SIMULATION: fictional transit lines inspired by Lucknow. Historical data is synthetically generated. Congestion is predicted, not live sensor data. No seating guarantee.')
 
 @st.cache_resource
-def get_system_components():
-    stations_df = DataLoader.load_stations()
-    routes_df = DataLoader.load_routes()
-    
-    # Load or instantiate model
-    if os.path.exists(MODEL_FILE):
-        predictor = CrowdPredictor.load(str(MODEL_FILE))
-    else:
-        predictor = CrowdPredictor()
-        # Fast fallback initialization if model file isn't pre-saved
-        if os.path.exists(HISTORICAL_CROWD_FILE):
-            crowd_df = DataLoader.load_crowd_data()
-            predictor.train_and_evaluate(crowd_df.iloc[:2000], crowd_df.iloc[2000:2500])
-        else:
-            from SRC.data.generate_dataset import generate_crowd_data
-            generate_crowd_data(str(HISTORICAL_CROWD_FILE), days=10)
-            crowd_df = DataLoader.load_crowd_data()
-            predictor.train_and_evaluate(crowd_df.iloc[:2000], crowd_df.iloc[2000:2500])
+def load_system():
+    return DataLoader.load_stations(), CrowdPredictor.load(), SmartTransitRouter()
 
-    router = SmartTransitRouter()
-    return stations_df, routes_df, predictor, router
+try:
+    stations,predictor,router = load_system()
+except (ValueError,FileNotFoundError) as exc:
+    st.error(str(exc))
+    st.code('python -m src.model.train')
+    st.stop()
 
-stations_df, routes_df, predictor, router = get_system_components()
-station_id_map = dict(zip(stations_df["name"], stations_df["station_id"]))
-station_name_map = dict(zip(stations_df["station_id"], stations_df["name"]))
-station_coords = dict(zip(stations_df["station_id"], zip(stations_df["latitude"], stations_df["longitude"])))
+ids=stations.station_id.tolist()
+labels=dict(zip(stations.station_id,stations.name))
+with st.sidebar:
+    st.header('Plan a simulated trip')
+    origin=st.selectbox('Origin',ids,index=1,format_func=lambda s:f'{s} - {labels[s]}')
+    destination=st.selectbox('Destination',ids,index=2,format_func=lambda s:f'{s} - {labels[s]}')
+    hour=st.slider('Departure hour',5,23,9)
+    day=st.selectbox('Day of week',list(range(7)),index=1,format_func=lambda d:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][d])
+    weather=st.selectbox('Weather scenario',['Clear','Rain','Storm'])
+    event=st.checkbox('Special-event scenario at all stations',value=False)
+    comfort=st.slider('Crowd avoidance preference',0.0,5.0,2.0,.25)
+    st.caption('0 disables crowd penalties. Larger preferences may increase travel time. Event input applies a hypothetical event to every station, broader than generator events.')
+try:
+    crowd=predictor.predict_network(ids,hour,day,weather,int(event))
+    result=router.compare_routes(origin,destination,crowd,comfort)
+    if result['status'] != 'SUCCESS':
+        st.warning('No connected route is available for this trip.')
+        st.stop()
+except ValueError as exc:
+    st.error(str(exc))
+    st.stop()
 
-# Header
-st.title("🚇 Smart Public Transport Route & Crowd Prediction System")
-st.markdown("**Real-Time Multi-Objective Optimization for Commuter Congestion Relief & Urban Transit Resilience**")
-
-# Sidebar Controls
-st.sidebar.header("🕹️ Commuter Route Planner")
-
-col_orig, col_dest = st.sidebar.columns(2)
-with col_orig:
-    origin_name = st.selectbox("Origin Station", list(stations_df["name"]), index=0)
-with col_dest:
-    dest_name = st.selectbox("Destination Station", list(stations_df["name"]), index=8)
-
-origin_id = station_id_map[origin_name]
-dest_id = station_id_map[dest_name]
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("🕒 Transit Conditions & Rush Hour")
-rush_preset = st.sidebar.selectbox(
-    "Simulation Scenario",
-    ["Morning Rush Hour (8:30 AM)", "Evening Rush Hour (18:30 PM)", "Off-Peak Midday (14:00 PM)", "Custom"]
-)
-
-if rush_preset == "Morning Rush Hour (8:30 AM)":
-    hour = 8
-    day_of_week = 1  # Tuesday
-elif rush_preset == "Evening Rush Hour (18:30 PM)":
-    hour = 18
-    day_of_week = 2  # Wednesday
-elif rush_preset == "Off-Peak Midday (14:00 PM)":
-    hour = 14
-    day_of_week = 3  # Thursday
+base,smart=result['naive_route'],result['smart_route']
+a=result['analytics']
+col1,col2,col3=st.columns(3)
+col1.metric('Signed exposure reduction',f"{a['crowd_reduction_percent']:+.2f}%")
+col2.metric('Travel-time trade-off',f"{a['travel_time_delta_mins']:+.1f} min")
+col3.metric('High-congestion stations avoided',str(a['bottlenecks_avoided']))
+if not a['is_different_path']:
+    st.success('Both methods recommend the same itinerary. No alternative has a lower weighted cost for this preference.')
 else:
-    hour = st.sidebar.slider("Departure Hour", 5, 23, 8)
-    day_of_week = st.sidebar.selectbox("Day of Week", [0, 1, 2, 3, 4, 5, 6], format_func=lambda d: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][d])
+    st.write(f"The recommendation minimizes travel minutes plus an assumed crowd discomfort penalty. It changes average station exposure from {base['avg_congestion']:.3f} to {smart['avg_congestion']:.3f}, with {a['travel_time_delta_mins']:+.1f} minutes of extra travel. This optimizes a weighted sum, so average exposure need not improve in every case.")
+for col,route,title in zip(st.columns(2),[base,smart],['Conventional baseline','Crowd-aware recommendation']):
+    with col:
+        st.subheader(title)
+        st.write(' → '.join(route['station_names']))
+        st.metric('Estimated duration',f"{route['total_time_mins']:.1f} min")
+        st.caption(f"In vehicle: {route['in_vehicle_time_mins']:.1f} min; transfers: {route['transfer_time_mins']:.1f} min")
+        st.write(f"Transfers: **{route['transfers']}** · Average congestion: **{route['avg_congestion']:.3f}** · Maximum: **{route['max_congestion']:.3f}** · High stations (≥0.70): **{len(route['bottlenecks'])}**")
+        if route['segments']:
+            st.dataframe(pd.DataFrame(route['segments'])[['from_station','to_station','line_name','base_time_mins','dest_crowd']],hide_index=True,use_container_width=True)
 
-weather = st.sidebar.selectbox("Weather Condition", ["Clear", "Rain", "Storm"])
-special_event = st.sidebar.checkbox("Special Event Surge (e.g. Match / Festival)", value=False)
-comfort_pref = st.sidebar.slider(
-    "Comfort Priority (Penalty on Crowds)",
-    min_value=0.0, max_value=2.5, value=1.2, step=0.1,
-    help="Higher values heavily penalize overcrowded stations, favoring less congested transit lines."
-)
-
-# Compute Real-Time Crowd Forecast across network
-all_station_ids = list(stations_df["station_id"])
-crowd_predictions = predictor.predict_network(
-    station_ids=all_station_ids,
-    hour=hour,
-    day_of_week=day_of_week,
-    weather=weather,
-    special_event=1 if special_event else 0
-)
-
-# Perform Route Optimization & Comparison
-comparison = router.compare_routes(
-    origin=origin_id,
-    destination=dest_id,
-    crowd_map=crowd_predictions,
-    comfort_preference=comfort_pref
-)
-
-# Main Dashboard Tabs
-tab_route, tab_map, tab_forecast, tab_architecture = st.tabs([
-    "🔀 Route Comparison",
-    "🗺️ Interactive City Map",
-    "📊 Station Crowd Analytics",
-    "⚙️ Software Engineering & ML Metrics"
-])
-
-# ----------------- TAB 1: Route Comparison -----------------
-with tab_route:
-    if comparison["status"] == "SUCCESS":
-        naive = comparison["naive_route"]
-        smart = comparison["smart_route"]
-        analytics = comparison["analytics"]
-
-        st.subheader("🏁 Real-Time Route Decision Matrix")
-
-        col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
-        with col_kpi1:
-            st.metric("Crowd Exposure Reduction", f"{analytics['crowd_reduction_percent']}%", delta=f"{analytics['crowd_reduction_percent']}% Better")
-        with col_kpi2:
-            st.metric("Bottlenecks Bypassed", f"{analytics['bottlenecks_avoided']} Stations", delta="Avoided High Congestion")
-        with col_kpi3:
-            st.metric("Smart Transit Time", f"{smart['total_time_mins']} mins", delta=f"{analytics['travel_time_delta_mins']} mins vs Naive")
-        with col_kpi4:
-            st.metric("Transfers Required", f"{smart['transfers']} line switches", delta=f"{smart['transfers'] - naive['transfers']} transfers")
-
-        st.markdown("---")
-
-        col_naive, col_smart = st.columns(2)
-
-        # Naive Route Card
-        with col_naive:
-            st.markdown("### ⚠️ Standard Route (Shortest Time Only)")
-            st.caption("Ignores platform crowds; forces commuter into peak congestion.")
-            st.write(f"**Total Transit Time:** {naive['total_time_mins']} mins")
-            st.write(f"**Distance:** {naive['total_distance_km']} km | **Transfers:** {naive['transfers']}")
-            st.write(f"**Average Congestion:** {naive['avg_congestion'] * 100:.1f}%")
-            st.write(f"**Max Congestion Encountered:** {naive['max_congestion'] * 100:.1f}%")
-            
-            if naive["bottlenecks"]:
-                st.markdown("**Severe Bottlenecks Encountered:**")
-                for bn in naive["bottlenecks"]:
-                    st.markdown(f"- 🔴 `{bn['name']}` ({bn['congestion']*100:.0f}% capacity)")
-            else:
-                st.markdown("🟢 *No severe bottlenecks on this corridor.*")
-
-            st.markdown("**Itinerary:**")
-            for idx, name in enumerate(naive["station_names"]):
-                st.markdown(f"**{idx+1}.** {name}")
-
-        # Smart Crowd-Aware Route Card
-        with col_smart:
-            st.markdown("### 🛡️ Smart Route (Crowd-Aware Pareto Optimized)")
-            st.caption("Dynamically re-routes via alternate lines to avoid delays and crush-loads.")
-            st.write(f"**Total Transit Time:** {smart['total_time_mins']} mins")
-            st.write(f"**Distance:** {smart['total_distance_km']} km | **Transfers:** {smart['transfers']}")
-            st.write(f"**Average Congestion:** {smart['avg_congestion'] * 100:.1f}%")
-            st.write(f"**Max Congestion Encountered:** {smart['max_congestion'] * 100:.1f}%")
-
-            if smart["bottlenecks"]:
-                st.markdown("**Severe Bottlenecks:**")
-                for bn in smart["bottlenecks"]:
-                    st.markdown(f"- 🟡 `{bn['name']}` ({bn['congestion']*100:.0f}% capacity)")
-            else:
-                st.markdown("🟢 **Zero Severe Bottlenecks Encountered! Smooth transit.**")
-
-            st.markdown("**Recommended Itinerary:**")
-            for idx, seg in enumerate(smart["segments"]):
-                from_n = station_name_map.get(seg['from_station'])
-                to_n = station_name_map.get(seg['to_station'])
-                st.markdown(f"**Step {idx+1}:** Take **{seg['line_name']}** ({seg['line_type']}) from `{from_n}` → `{to_n}` ({seg['base_time_mins']} mins)")
-    else:
-        st.error("No valid route could be found between selected stations.")
-
-# ----------------- TAB 2: Interactive City Map -----------------
-with tab_map:
-    st.subheader(f"🗺️ Real-Time Transit Map & Congestion Heatmap (Hour: {hour}:00)")
-    
-    # Base Folium Map centered on Lucknow Transit Hub
-    m = folium.Map(location=[26.8400, 80.9500], zoom_start=12, tiles="CartoDB positron")
-
-    # Draw Transit Line Edges
-    for _, row in routes_df.iterrows():
-        u, v = row["from_station"], row["to_station"]
-        if u in station_coords and v in station_coords:
-            c1, c2 = station_coords[u], station_coords[v]
-            color = "#ef4444" if "Red" in row["line_name"] else ("#3b82f6" if "Blue" in row["line_name"] else ("#10b981" if "Green" in row["line_name"] else "#f59e0b"))
-            folium.PolyLine(
-                [c1, c2],
-                color=color,
-                weight=3,
-                opacity=0.6,
-                tooltip=f"{row['line_name']} ({row['base_time_mins']}m)"
-            ).add_to(m)
-
-    # Highlight Smart Route in purple/blue glow
-    if comparison["status"] == "SUCCESS":
-        smart_coords = [station_coords[s] for s in smart["stations"] if s in station_coords]
-        folium.PolyLine(
-            smart_coords,
-            color="#8b5cf6",
-            weight=7,
-            opacity=0.9,
-            tooltip="★ Recommended Crowd-Aware Itinerary"
-        ).add_to(m)
-
-    # Draw Stations
-    for _, st_row in stations_df.iterrows():
-        st_id = st_row["station_id"]
-        lat, lon = st_row["latitude"], st_row["longitude"]
-        cong = crowd_predictions.get(st_id, 0.20)
-
-        # Color based on congestion
-        if cong >= 0.70:
-            fill_color = "#dc2626"  # Red
-            status_text = "SEVERE CONGESTION"
-        elif cong >= 0.35:
-            fill_color = "#eab308"  # Yellow
-            status_text = "MODERATE LOAD"
-        else:
-            fill_color = "#16a34a"  # Green
-            status_text = "LOW DENSITY"
-
-        is_endpoint = (st_id == origin_id or st_id == dest_id)
-        radius = 11 if is_endpoint else 7
-
-        popup_html = f"""
-        <b>{st_row['name']}</b> ({st_id})<br>
-        Zone: {st_row['zone']}<br>
-        Predicted Congestion: <b>{cong*100:.1f}%</b><br>
-        Status: <i>{status_text}</i><br>
-        Capacity: {st_row['capacity']} pass/hr
-        """
-        folium.CircleMarker(
-            location=[lat, lon],
-            radius=radius,
-            color="#1e293b" if is_endpoint else fill_color,
-            weight=3 if is_endpoint else 1,
-            fill=True,
-            fill_color=fill_color,
-            fill_opacity=0.9,
-            popup=folium.Popup(popup_html, max_width=250),
-            tooltip=f"{st_row['name']}: {cong*100:.0f}% crowd"
-        ).add_to(m)
-
-    components.html(m._repr_html_(), height=550)
-
-# ----------------- TAB 3: Station Crowd Analytics -----------------
-with tab_forecast:
-    st.subheader("📈 24-Hour Predictive Congestion Curve")
-    selected_st_name = st.selectbox("Select Station to Analyze", list(stations_df["name"]))
-    selected_st_id = station_id_map[selected_st_name]
-
-    # Compute 24-hour prediction profile
-    hours = list(range(5, 24))
-    curve_data = []
-    for h in hours:
-        c = predictor.predict_single(
-            station_id=selected_st_id,
-            hour=h,
-            day_of_week=day_of_week,
-            weather=weather,
-            special_event=1 if special_event else 0
-        )
-        curve_data.append({"Hour": f"{h:02d}:00", "Congestion Index": c, "Crowd Level": c * 100})
-
-    curve_df = pd.DataFrame(curve_data)
-    st.line_chart(curve_df.set_index("Hour")["Crowd Level"])
-    st.caption("Hourly platform congestion percentage showing distinct morning (8-10 AM) and evening (17-20 PM) peak surges.")
-
-# ----------------- TAB 4: Architecture & Verification -----------------
-with tab_architecture:
-    st.subheader("⚙️ Software Engineering & System Architecture")
-    
-    col_arch1, col_arch2 = st.columns(2)
-    with col_arch1:
-        st.markdown("""
-        #### 🏛️ Software Engineering Design
-        - **Architectural Pattern**: Modular Model-View-Controller (MVC) with strict separation of concerns.
-        - **Graph Engine**: Multi-criteria Pareto Search running on `networkx.MultiDiGraph`.
-        - **Time Complexity**:
-          $$\\mathcal{O}((E + V \\log V))$$
-          Query execution executes within **< 4.5 milliseconds**, suitable for real-time mobile transit apps.
-        - **Space Complexity**:
-          $$\\mathcal{O}(V + E)$$
-        """)
-    with col_arch2:
-        st.markdown(f"""
-        #### 🤖 Machine Learning Model Benchmarks
-        - **Active Model**: Gradient Boosting Regressor with Cyclical Sine/Cosine Feature Engineering.
-        - **R² Score (Variance Explained)**: `{predictor.metrics.get('R2', 0.942):.4f}`
-        - **Root Mean Squared Error (RMSE)**: `{predictor.metrics.get('RMSE', 0.048):.4f}`
-        - **Mean Absolute Error (MAE)**: `{predictor.metrics.get('MAE', 0.036):.4f}`
-        - **Mean Absolute Percentage Error**: `{predictor.metrics.get('MAPE_percent', 7.15):.2f}%`
-        """)
-
-    st.markdown("---")
-    st.markdown("### 🧪 Automated Software Testing & Verification Status")
-    st.success("✅ Unit Tests: DataLoader schema validation, bidirectional graph generation passing.")
-    st.success("✅ Algorithmic Tests: Multi-objective Dijkstra optimality & transfer penalty validation passing.")
-    st.success("✅ System Tests: End-to-end integration pipeline validated with 100% assertion pass rate.")
+st.subheader('Interactive simulated network')
+st.caption('Blue: baseline. Green: recommendation. Gray: simulated network connections.')
+coords={r.station_id:(r.longitude,r.latitude) for r in stations.itertuples()}
+rows=[]
+for i,(u,v,data) in enumerate(router.graph.edges(data=True)):
+    for order,s in enumerate([u,v]):
+        x,y=coords[s]
+        rows.append(dict(longitude=x,latitude=y,order=order,segment=str(i),route='Network'))
+for route,label in [(base,'Baseline'),(smart,'Recommended')]:
+    for order,s in enumerate(route['stations']):
+        x,y=coords[s]
+        rows.append(dict(longitude=x,latitude=y,order=order,segment=label,route=label))
+network=alt.Chart(pd.DataFrame(rows)).mark_line().encode(
+    x=alt.X('longitude:Q',scale=alt.Scale(zero=False)),
+    y=alt.Y('latitude:Q',scale=alt.Scale(zero=False)),
+    detail='segment:N',order='order:Q',
+    color=alt.Color('route:N',scale=alt.Scale(domain=['Network','Baseline','Recommended'],range=['#cbd5e1','#2563eb','#059669'])),
+    size=alt.condition(alt.datum.route=='Network',alt.value(1),alt.value(4)))
+points=stations.copy()
+points['Predicted congestion']=points.station_id.map(crowd)
+markers=alt.Chart(points).mark_circle(size=90,color='#0f172a').encode(
+    x='longitude:Q',y='latitude:Q',tooltip=['station_id','name',alt.Tooltip('Predicted congestion:Q',format='.3f')])
+st.altair_chart((network+markers).properties(height=450).interactive(),use_container_width=True)
+st.caption('Pan, zoom and hover station markers. This schematic uses illustrative coordinates and works offline once dependencies are installed.')
+st.subheader('Predicted station congestion')
+frame=pd.DataFrame({'Station':ids,'Predicted congestion':[crowd[s] for s in ids]})
+st.bar_chart(frame.set_index('Station'))
+st.dataframe(frame,hide_index=True,use_container_width=True)
+st.caption(f"Model: {predictor.metrics['best_model_name']}. Held-out synthetic test MAE: {predictor.metrics['MAE']:.4f}. Exposure = arithmetic mean of station congestion including both endpoints; duration includes 4 minutes per line transfer. Predictions use one departure-time snapshot, not arrival-time forecasts.")

@@ -1,0 +1,3 @@
+# Preserved implementation A
+
+The original categorical classifier, separate STOP_ network, generator and tests are retained here for review and contributor history. They are reference source, not installed modules or supported commands. Their original configuration is config.original.yaml. Useful invariants (cyclical features, valid coordinates, positive costs, identity/disconnected routes, zero preference and NetworkX optimality) are tested against the authoritative continuous-regression pipeline in tests/test_core.py. Only src/model, src/pipeline, src/routing and src/ui form the supported application. No source has been discarded.

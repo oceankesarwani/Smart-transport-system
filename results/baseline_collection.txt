@@ -1,0 +1,63 @@
+tests/test_app_smoke.py::test_streamlit_app_loads_successfully
+tests/test_data_gen.py::test_data_generation_columns
+tests/test_data_gen.py::test_crowd_level_classes
+tests/test_data_gen.py::test_crowd_score_range
+tests/test_data_gen.py::test_data_reproducibility
+tests/test_data_gen.py::test_hour_bounds
+tests/test_model.py::test_feature_pipeline_dimensions
+tests/test_model.py::test_cyclical_trigonometric_encodings
+tests/test_model.py::test_model_training_and_accuracy
+tests/test_model.py::test_predict_crowd_output_labels
+tests/test_model.py::test_model_save_and_load
+tests/test_network.py::test_stop_count
+tests/test_network.py::test_routes_count
+tests/test_network.py::test_stops_have_valid_coordinates
+tests/test_network.py::test_interchange_stops_exist
+tests/test_network.py::test_travel_times_within_bounds
+tests/test_network.py::test_adjacency_list_non_negative
+tests/test_network.py::test_graph_bidirectional_symmetry
+tests/test_network.py::test_all_stops_have_neighbors
+tests/test_routing.py::test_same_source_and_destination
+tests/test_routing.py::test_invalid_stop_ids
+tests/test_routing.py::test_baseline_matches_networkx_shortest_path
+tests/test_routing.py::test_crowd_aware_route_returns_valid_structure
+tests/test_routing.py::test_transfer_penalty_applied
+tests/test_routing.py::test_lambda_zero_equals_baseline
+tests/test_routing.py::test_crowd_penalty_sensitivity
+tests/test_routing.py::test_unreachable_node_graceful_handling
+
+=================================== ERRORS ====================================
+_________________ ERROR collecting tests/test_data_loader.py __________________
+ImportError while importing test module 'C:\Users\harsh\OneDrive\Desktop\se project\Smart-transport-system\tmp\baseline\tests\test_data_loader.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+..\..\..\..\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tmp\baseline\tests\test_data_loader.py:6: in <module>
+    from SRC.pipeline.data_loader import DataLoader
+E   ModuleNotFoundError: No module named 'SRC'
+_________________ ERROR collecting tests/test_integration.py __________________
+ImportError while importing test module 'C:\Users\harsh\OneDrive\Desktop\se project\Smart-transport-system\tmp\baseline\tests\test_integration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+..\..\..\..\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tmp\baseline\tests\test_integration.py:6: in <module>
+    from SRC.pipeline.data_loader import DataLoader
+E   ModuleNotFoundError: No module named 'SRC'
+============================== warnings summary ===============================
+..\..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\anyio\pytest_plugin.py:14
+  C:\Users\harsh\AppData\Local\Programs\Python\Python311\Lib\site-packages\anyio\pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+ERROR tmp\baseline\tests\test_data_loader.py
+ERROR tmp\baseline\tests\test_integration.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!
+27 tests collected, 2 errors in 6.69s

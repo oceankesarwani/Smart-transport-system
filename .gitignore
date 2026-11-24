@@ -30,3 +30,11 @@ venv/
 *.bak
 data/raw/ridership.csv
 !data/raw/sample_ridership.csv
+
+tmp/
+baseline.zip
+coverage.json
+coverage.xml
+.env
+*.key
+*.pem

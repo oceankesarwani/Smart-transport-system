@@ -1,35 +1,19 @@
-# Makefile for Smart Public Transport Route & Crowd Prediction System
-
-.PHONY: setup data train evaluate test app report slides all clean
-
-PYTHON = python
-
+PYTHON ?= python
+.PHONY: setup data train evaluate test app report slides all
 setup:
 	$(PYTHON) -m pip install -r requirements.txt
-
 data:
-	$(PYTHON) -m src.transport.data_gen
-
+	$(PYTHON) data/generate_dataset.py
 train:
-	$(PYTHON) -m src.transport.model
-
+	$(PYTHON) -m src.model.train
 evaluate:
-	$(PYTHON) -m src.transport.evaluate
-
+	$(PYTHON) -m scripts.benchmark
 test:
-	$(PYTHON) -m pytest -c pytest.ini --cov=src --cov-fail-under=80 tests/ -v
-
+	$(PYTHON) -m pytest --cov=src.pipeline --cov=src.model --cov=src.routing --cov-branch --cov-fail-under=90 --cov-report=json:results/coverage.json --junitxml=results/junit.xml
 app:
-	streamlit run app/streamlit_app.py
-
+	$(PYTHON) -m streamlit run src/ui/app.py
 report:
-	$(PYTHON) scripts/build_report_assets.py
-
+	$(PYTHON) -m scripts.build_documents
 slides:
-	$(PYTHON) scripts/build_slides.py
-
-all: data train evaluate test report slides
-	@echo "All targets executed successfully."
-
-clean:
-	rm -rf __pycache__ src/transport/__pycache__ tests/__pycache__ .pytest_cache .coverage
+	$(PYTHON) -m scripts.build_slides
+all: train evaluate test report slides

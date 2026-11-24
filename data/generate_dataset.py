@@ -1,6 +1,6 @@
 """
 Dataset Generator for Smart Public Transport Route & Crowd Prediction System.
-Generates realistic 60-day historical time-series sensor tap & platform congestion data.
+Generates deterministic 60-day synthetic station congestion simulation data.
 Includes rush hours, weather anomalies, weekend patterns, and special event surges.
 """
 
@@ -153,7 +153,7 @@ def generate_crowd_data(output_path: str, seed: int = 42, days: int = 60):
     df = pd.DataFrame(records)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False)
-    print(f"Generated {len(df)} historical crowd records -> {output_path}")
+    print(f"Generated {len(df)} synthetic crowd records -> {output_path}")
     return df
 
 if __name__ == "__main__":

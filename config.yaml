@@ -17,29 +17,15 @@ project:
   deadline: "2026-11-25"
 
 data:
-  raw_path: "data/raw/ridership.csv"
-  processed_dir: "data/processed"
-  num_records: 60000
-  start_date: "2026-09-01"
-  end_date: "2026-11-20"
-  hours: [6, 22]
-  crowd_thresholds:
-    low_max: 0.40
-    medium_max: 0.75
-
+  stations: "data/stations.csv"
+  routes: "data/routes.csv"
+  history: "data/historical_crowd.csv"
+  provenance: "synthetic simulation"
 model:
-  artifact_path: "models/crowd_classifier.pkl"
-  test_size: 0.20
-  cv_folds: 5
+  artifact_path: "models/crowd_predictor.pkl"
   random_state: 42
-  rf_param_grid:
-    n_estimators: [50, 100]
-    max_depth: [8, 14]
-
+  split: "60/20/20 chronological whole days"
 routing:
-  default_lambda: 1.5
-  transfer_penalty: 4.0
-  crowd_penalty_map:
-    Low: 0
-    Medium: 1
-    High: 3
+  crowd_weight: 2.5
+  transfer_minutes: 4.0
+  comfort_range: [0.0, 5.0]

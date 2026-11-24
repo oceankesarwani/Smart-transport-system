@@ -3,13 +3,14 @@ Data Loader and Validator Module
 Ensures strict schema validation, type integrity, and bidirectional route construction.
 """
 import os
+import numpy as np
 import pandas as pd
 from typing import Tuple, Dict, Any
-from SRC.config import STATIONS_FILE, ROUTES_FILE, HISTORICAL_CROWD_FILE
+from src.config import STATIONS_FILE, ROUTES_FILE, HISTORICAL_CROWD_FILE
 
 REQUIRED_STATION_COLS = ["station_id", "name", "latitude", "longitude", "capacity", "is_interchange"]
 REQUIRED_ROUTE_COLS = ["route_id", "line_name", "line_type", "from_station", "to_station", "distance_km", "base_time_mins"]
-REQUIRED_CROWD_COLS = ["station_id", "hour", "day_of_week", "is_weekend", "is_peak", "congestion_index"]
+REQUIRED_CROWD_COLS = ["station_id", "hour", "day_of_week", "is_weekend", "is_peak", "congestion_index", "timestamp", "weather", "special_event"]
 
 class DataLoader:
     @staticmethod
@@ -26,6 +27,10 @@ class DataLoader:
         df["longitude"] = df["longitude"].astype(float)
         df["capacity"] = df["capacity"].astype(int)
         df["is_interchange"] = df["is_interchange"].astype(int)
+        if df.empty or df.isna().any().any() or df.station_id.duplicated().any():
+            raise ValueError("Stations must be nonempty, complete and unique")
+        if not (df.latitude.between(-90, 90).all() and df.longitude.between(-180, 180).all() and (df.capacity > 0).all()):
+            raise ValueError("Invalid station coordinates or capacity")
         return df
 
     @staticmethod
@@ -42,6 +47,11 @@ class DataLoader:
         df["distance_km"] = df["distance_km"].astype(float)
         df["base_time_mins"] = df["base_time_mins"].astype(float)
         
+        if df.empty or df.isna().any().any():
+            raise ValueError("Routes must be nonempty and complete")
+        for col in ["distance_km", "base_time_mins"]:
+            if not np.isfinite(df[col]).all() or (df[col] < 0).any():
+                raise ValueError(f"Invalid non-negative route value: {col}")
         if bidirectional:
             reversed_df = df.copy()
             reversed_df["from_station"] = df["to_station"]
@@ -63,7 +73,19 @@ class DataLoader:
                 raise ValueError(f"Missing required crowd column: '{col}'")
         df["station_id"] = df["station_id"].astype(str).str.strip()
         df["hour"] = df["hour"].astype(int)
-        df["congestion_index"] = df["congestion_index"].clip(0.0, 1.0)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="raise")
+        if df.empty or df.isna().any().any():
+            raise ValueError("Crowd data must be nonempty and complete")
+        for col, lo, hi in [("hour", 0, 23), ("day_of_week", 0, 6), ("congestion_index", 0, 1), ("special_event", 0, 1)]:
+            if not df[col].between(lo, hi).all():
+                raise ValueError(f"Invalid range: {col}")
+        if not df.weather.isin(["Clear", "Rain", "Storm"]).all():
+            raise ValueError("Invalid weather")
+        if not ((df.timestamp.dt.hour == df.hour) & (df.timestamp.dt.dayofweek == df.day_of_week)).all():
+            raise ValueError("Timestamp context mismatch")
+        if df.duplicated(["timestamp", "station_id"]).any():
+            raise ValueError("Duplicate station timestamp")
+        df = df.sort_values(["timestamp", "station_id"]).reset_index(drop=True)
         return df
 
     @classmethod
