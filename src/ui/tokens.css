@@ -1,31 +1,326 @@
-/* Hallmark · theme: custom · shape: app screen · redesign: full · idea: compare station exposure on a transit workbench · vibe: clear civic wayfinding with measured tradeoffs · posture: restrained · axes: light/system-sans/warm · scope: app */
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V3 · weakest: V, retained native Streamlit controls for reliable keyboard interaction */
+/* Transit Command Dashboard — Mint & Clean White Theme */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 :root {
- --transit-paper: #f8faf9; --transit-ink: #203c39; --transit-muted: #47615c;
- --transit-line: #c3d2cd; --transit-panel: #e9f0ed; --transit-accent: #a43d20;
- --transit-focus: #a43d20; --transit-font: 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --transit-paper: #f1f6f3;
+  --transit-panel: #e2efe9;
+  --transit-card: #ffffff;
+  --transit-line: #dbe8e1;
+  --transit-border: #d4e4db;
+  --transit-ink: #0f172a;
+  --transit-muted: #526b62;
+  --transit-primary: #124030;
+  --transit-accent: #059669;
+  --transit-accent-light: #d1fae5;
+  --transit-focus: #10b981;
+  --transit-shadow: 0 4px 16px -2px rgba(18, 50, 38, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --transit-radius: 16px;
+  --transit-font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
-html, body { overflow-x: clip; }
-.stApp { background: var(--transit-paper); color: var(--transit-ink); font-family: var(--transit-font); }
-.stApp h1, .stApp h2, .stApp h3 { font-family: var(--transit-font); color: var(--transit-ink); overflow-wrap: break-word; min-width: 0; }
-.stApp h1 { font-size: 2.2rem; font-weight: 650; letter-spacing: -.035em; }
-.stApp h2 { font-size: 1.55rem; }
-.stApp h3 { font-size: 1.2rem; }
-.main .block-container { max-width: 1440px; padding-top: 2rem; padding-bottom: 3rem; }
-[data-testid='stSidebar'] { background: var(--transit-panel); border-right: 1px solid var(--transit-line); }
-[data-testid='stSidebar'] .block-container { padding-top: 2rem; }
-[data-testid='stMetric'] { border-top: 2px solid var(--transit-line); padding: .8rem 0; }
-[data-testid='stMetricValue'] { font-variant-numeric: tabular-nums; color: var(--transit-ink); font-size: 2rem; }
-[data-testid='stCaptionContainer'] { color: var(--transit-muted); }
-.stApp [data-baseweb='select'] > div, .stApp button { border-radius: 3px; }
-.stApp :is(button,input,select,textarea,[tabindex]):focus-visible { outline: 3px solid var(--transit-focus); outline-offset: 3px; }
-[data-testid='stAlert'] { border-radius: 3px; }
-@media(max-width: 760px) {
- .main .block-container { padding: 1rem; }
- .stApp h1 { font-size: 1.7rem; }
- [data-testid='stHorizontalBlock'] { flex-wrap: wrap; }
- [data-testid='column'] { min-width: min(100%, 280px); flex: 1 1 100%; }
+
+html, body {
+  background-color: var(--transit-paper) !important;
+  color: var(--transit-ink) !important;
+  font-family: var(--transit-font) !important;
+  overflow-x: clip;
 }
-@media(prefers-reduced-motion: reduce) { .stApp *, .stApp *::before, .stApp *::after { animation: none !important; transition: none !important; } }
-.stApp button:active { background: var(--transit-panel); }
-.stApp h1, .stApp h2 { text-wrap: balance; }
+
+.stApp {
+  background-color: var(--transit-paper) !important;
+  color: var(--transit-ink) !important;
+  font-family: var(--transit-font) !important;
+}
+
+.main .block-container {
+  max-width: 1440px;
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+/* Headings */
+.stApp h1, .stApp h2, .stApp h3, .stApp h4 {
+  font-family: var(--transit-font) !important;
+  color: var(--transit-ink) !important;
+  font-weight: 700 !important;
+}
+
+/* Sidebar styling */
+[data-testid='stSidebar'] {
+  background-color: var(--transit-panel) !important;
+  border-right: 1px solid var(--transit-line) !important;
+}
+
+[data-testid='stSidebar'] .block-container {
+  padding-top: 1.5rem !important;
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
+}
+
+[data-testid='stSidebar'] h1, 
+[data-testid='stSidebar'] h2, 
+[data-testid='stSidebar'] h3 {
+  color: var(--transit-primary) !important;
+  font-weight: 750 !important;
+  font-size: 1.25rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+[data-testid='stSidebar'] label {
+  color: var(--transit-primary) !important;
+  font-weight: 600 !important;
+  font-size: 0.86rem !important;
+  margin-bottom: 3px !important;
+}
+
+[data-testid='stSidebar'] [data-baseweb='select'] > div {
+  background-color: #ffffff !important;
+  border: 1px solid var(--transit-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+  font-size: 0.9rem !important;
+}
+
+[data-testid='stSidebar'] [data-baseweb='select'] span {
+  color: var(--transit-ink) !important;
+  font-weight: 500 !important;
+}
+
+/* Slider styling */
+[data-testid='stSidebar'] [data-testid='stSlider'] {
+  padding-top: 4px;
+}
+
+/* Info Alert */
+[data-testid='stAlert'] {
+  background-color: #e6f4ea !important;
+  border: 1px solid #c7e8d6 !important;
+  border-radius: 12px !important;
+  padding: 0.75rem 1.25rem !important;
+  color: #1b4332 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+  margin-bottom: 1.25rem !important;
+}
+
+[data-testid='stAlert'] * {
+  color: #1b4332 !important;
+  font-size: 0.86rem !important;
+}
+
+/* Metric styling */
+[data-testid='stMetric'] {
+  background: #ffffff !important;
+  border: 1px solid var(--transit-border) !important;
+  border-radius: var(--transit-radius) !important;
+  padding: 1.1rem 1.3rem !important;
+  box-shadow: var(--transit-shadow) !important;
+}
+
+[data-testid='stMetricLabel'] {
+  color: var(--transit-muted) !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+}
+
+[data-testid='stMetricValue'] {
+  color: var(--transit-ink) !important;
+  font-size: 1.75rem !important;
+  font-weight: 800 !important;
+  font-family: var(--transit-font) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-testid='stMetricDelta'] {
+  font-weight: 600 !important;
+  font-size: 0.78rem !important;
+}
+
+/* Dataframe styling */
+[data-testid='stDataFrame'] {
+  border-radius: 14px !important;
+  border: 1px solid var(--transit-border) !important;
+  box-shadow: var(--transit-shadow) !important;
+  background: #ffffff !important;
+  overflow: hidden !important;
+}
+
+/* Vega / Altair charts */
+[data-testid='stVegaLiteChart'] {
+  background: #ffffff !important;
+  border: 1px solid var(--transit-border) !important;
+  border-radius: var(--transit-radius) !important;
+  padding: 1rem !important;
+  box-shadow: var(--transit-shadow) !important;
+}
+
+/* Buttons */
+.stButton > button {
+  background-color: var(--transit-primary) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  padding: 0.6rem 1.4rem !important;
+  box-shadow: 0 2px 6px rgba(18, 64, 48, 0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+.stButton > button:hover {
+  background-color: #0a2d21 !important;
+  box-shadow: 0 4px 12px rgba(18, 64, 48, 0.3) !important;
+}
+
+/* Cards & Widgets */
+.header-banner-card {
+  background: #ffffff;
+  border: 1px solid var(--transit-border);
+  border-radius: var(--transit-radius);
+  padding: 1.1rem 1.6rem;
+  box-shadow: var(--transit-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 1.4rem;
+}
+
+.kpi-box {
+  background: #ffffff;
+  border: 1px solid var(--transit-border);
+  border-radius: var(--transit-radius);
+  padding: 1.1rem 1.25rem;
+  box-shadow: var(--transit-shadow);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.kpi-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.kpi-data {
+  flex: 1;
+  min-width: 0;
+}
+
+.kpi-num {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.kpi-lbl {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--transit-muted);
+  margin-top: 2px;
+}
+
+.kpi-sub {
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Route Summary Card */
+.summary-card {
+  background: #ffffff;
+  border: 1px solid var(--transit-border);
+  border-radius: var(--transit-radius);
+  padding: 1.4rem 1.5rem;
+  box-shadow: var(--transit-shadow);
+  height: 100%;
+}
+
+.summary-title {
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--transit-ink);
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f5f3;
+}
+
+.summary-item:last-of-type {
+  border-bottom: none;
+}
+
+.summary-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--transit-muted);
+}
+
+.summary-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--transit-ink);
+}
+
+.summary-badge-success {
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-top: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #15803d;
+}
+
+/* Itinerary card */
+.itinerary-card {
+  background: #ffffff;
+  border: 1px solid var(--transit-border);
+  border-radius: var(--transit-radius);
+  padding: 1.3rem 1.4rem;
+  box-shadow: var(--transit-shadow);
+  margin-bottom: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 760px) {
+  .main .block-container { padding: 1rem; }
+  .kpi-row { grid-template-columns: 1fr; }
+  [data-testid='stHorizontalBlock'] { flex-wrap: wrap; }
+  [data-testid='column'] { min-width: 100% !important; flex: 1 1 100% !important; }
+}
