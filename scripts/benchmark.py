@@ -2,6 +2,7 @@
 import json
 import time
 from itertools import permutations
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -20,7 +21,7 @@ SCENARIOS = [
 WEIGHTS=[0,1,2,5]
 
 
-def run_benchmark():
+def run_benchmark(output_dir=None):
     stations=DataLoader.load_stations().station_id.tolist()
     predictor=CrowdPredictor.load()
     router=SmartTransitRouter()
@@ -46,7 +47,7 @@ def run_benchmark():
                         prefix+'_high':len(route['bottlenecks']),prefix+'_minutes':route['total_time_mins'],
                         prefix+'_transfers':route['transfers']})
                 records.append(record)
-    out=BASE_DIR/'results';out.mkdir(exist_ok=True)
+    out=Path(output_dir) if output_dir else BASE_DIR/'results';out.mkdir(parents=True,exist_ok=True)
     df=pd.DataFrame(records)
     df.to_csv(out/'routing_benchmark.csv',index=False)
     delta=df.baseline_mean-df.smart_mean
@@ -63,7 +64,8 @@ def run_benchmark():
         'mean_routing_pair_ms':float(df.routing_pair_ms.mean()),
         'p95_routing_pair_ms':float(df.routing_pair_ms.quantile(.95)),
         'mean_network_prediction_ms':float(np.mean(prediction_times)),
-        'demo':best}
+        'largest_reduction_demo':best,
+        'demo':df[(df.scenario=='storm') & (df.origin=='S04') & (df.destination=='S14') & (df.comfort==2)].iloc[0].to_dict()}
     (out/'routing_summary.json').write_text(json.dumps(summary,indent=2),encoding='utf-8')
     groups=df.groupby('scenario')[['baseline_mean','smart_mean']].mean()
     ax=groups.plot.bar(color=['#2563eb','#059669'],figsize=(9,4),rot=0)
@@ -76,4 +78,6 @@ def run_benchmark():
     return summary
 
 if __name__=='__main__':
-    run_benchmark()
+    import argparse
+    parser=argparse.ArgumentParser();parser.add_argument('--output-dir')
+    run_benchmark(parser.parse_args().output_dir)

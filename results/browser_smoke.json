@@ -1,0 +1,24 @@
+{
+  "url": "http://localhost:8501",
+  "external_requests_blocked": 0,
+  "console_errors": [],
+  "controls": {
+    "selectboxes": 4,
+    "sliders": 2
+  },
+  "scenario": {
+    "origin": "S04",
+    "destination": "S14",
+    "day": "Thursday",
+    "hour": 18,
+    "weather": "Storm",
+    "preference": 2,
+    "event": false
+  },
+  "verified_display": {
+    "baseline_minutes": 22,
+    "smart_minutes": 25,
+    "reduction": "+20.44%"
+  },
+  "canvas_count": 17
+}

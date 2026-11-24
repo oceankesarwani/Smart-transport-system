@@ -209,3 +209,19 @@ def test_duplicate_data(tmp_path):
         load=getattr(DataLoader,'load_'+kind);df=load()
         path=tmp_path/'duplicate.csv';pd.concat([df,df.head(1)]).to_csv(path,index=False)
         with pytest.raises(ValueError): load(path)
+import pytest
+from src.model.crowd_predictor import CrowdPredictor
+from src.pipeline.data_loader import DataLoader
+
+
+def test_training_rejects_overlapping_periods():
+    df=DataLoader.load_crowd_data()
+    with pytest.raises(ValueError,match='disjoint chronological'):
+        CrowdPredictor().train_and_evaluate(df.head(100),df.head(100),df.head(100))
+
+def test_generator_reproduces_committed_history(tmp_path):
+    from data.generate_dataset import generate_crowd_data
+    output=tmp_path/'history.csv'
+    generated=generate_crowd_data(str(output),seed=42,days=60)
+    committed=pd.read_csv('data/historical_crowd.csv')
+    pd.testing.assert_frame_equal(generated,committed)

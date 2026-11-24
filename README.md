@@ -1,258 +1,156 @@
-# 🚇 Smart Public Transport Route and Crowd Prediction System
+# Smart Public Transport System: Crowd-Aware Route Optimization
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests: 12 Passed](https://img.shields.io/badge/tests-12%20passed-brightgreen.svg)]()
-[![R² Score: 0.9730](https://img.shields.io/badge/R%C2%B2%20Score-0.9730-success.svg)]()
-[![Documentation: IEEE 830](https://img.shields.io/badge/Docs-IEEE%20830%20SRS-informational.svg)]()
+CS201 Software Engineering, Indian Institute of Information Technology Lucknow.
 
-> **Academic Coursework:** CS201 Software Engineering (Semester 3)  
-> **Institution:** Indian Institute of Information Technology, Lucknow (IIITL)  
-> **Author / Student:** Ocean (Roll No: `LCI2025019`)  
-> **Submission Date:** November 25, 2026  
+Contributors (preserved from the original configuration): Dhruvika Rawat (LCB2025012), Ganga Kaur (LCI2025033), Harshita Punia (LCB2025011), Ocean Kesarwani (LCI2025019).
 
----
+## Problem and motivation
 
-## 📋 Table of Contents
-1. [Pinpointed Single Core Problem](#1-pinpointed-single-core-problem)
-2. [Motivation & Why This Problem?](#2-motivation--why-this-problem)
-3. [System Architecture & The Role of Software Engineering](#3-system-architecture--the-role-of-software-engineering)
-4. [Why That Approach? (Engineering Trade-Offs & Justification)](#4-why-that-approach-engineering-trade-offs--justification)
-5. [Significant Outcomes & Empirical Results](#5-significant-outcomes--empirical-results)
-6. [Innovation & Why Different from Others](#6-innovation--why-different-from-others)
-7. [Software Testing (ST) Strategy & Stopping Criteria](#7-software-testing-st-strategy--stopping-criteria)
-8. [Project Directory Structure](#8-project-directory-structure)
-9. [Installation & How to Run](#9-installation--how-to-run)
-10. [Presentation & SRS Deliverables](#10-presentation--srs-deliverables)
+Conventional travel-time routing can recommend a path through crowded stations because congestion is absent from its objective. This project predicts station congestion and lets a commuter compare the quickest simulated itinerary with a route that trades travel time for lower accumulated crowd discomfort. The objective is to reduce predicted station exposure while making added time visible.
 
----
+**Simulation disclosure:** All 22,800 historical station-hour rows are synthetic. The 20-station network has fictional lines inspired by Lucknow and is not an operational route guide. There are no observed passenger measurements, live sensors, seating guarantees or demonstrated real-world congestion reductions.
 
-## 1. Pinpointed Single Core Problem
+## Supported implementation
 
-> **Professor's Requirement:** *"Only one core problem, no side problem (Ex: Appointment of Doctor -> your approach reduce waiting time)."*
+The authoritative pipeline is `src/pipeline` → `src/model` → `src/routing` → `src/ui/app.py`. The original alternative classifier, network and tests are preserved under `legacy/` for historical reference. They are outside the supported package and acceptance suite. `app/streamlit_app.py` forwards to the same supported UI.
 
-### The Pinpointed Problem:
-**Transit Station Overcrowding Bottlenecks Caused by Static Shortest-Path Routing.**
-
-Existing consumer transit navigation tools (such as Google Maps or static metro timetables) calculate routes **purely on spatial distance or nominal timetable duration**. During peak rush hours, 100% of commuters traveling between city zones are directed onto identical nominal shortest-path trunk corridors.
-
-**The Failure Chain:**
-1. Passenger loads concentrate onto 2–3 interchange stations, exceeding **90% to 110% of physical platform capacity**.
-2. Platform crush loads force vehicle dwell times to double or triple (passengers cannot alight or board smoothly).
-3. Delayed trains trigger cascading headway gaps and delay shockwaves across the entire transit network, while **parallel express bus corridors and secondary loop rail lines sit half-empty at 25–40% capacity**.
-
----
-
-## 2. Motivation & Why This Problem?
-
-1. **Boarding Dwell Time Dominates Urban Delays:**
-   Empirical transportation engineering data reveals that **42% of peak-hour transit delays** do not occur while vehicles are running at speed between stations; they occur due to boarding friction, door-blocking, and crowd bottlenecks at station platforms. Making trains faster cannot solve the crisis if passengers cannot physically board.
-2. **Passenger Safety & Post-Pandemic Public Health:**
-   Extreme platform crowding ($\ge 6\text{ passengers/m}^2$) leads to heat exhaustion, platform falls, and anxiety. Commuters who experience chronic crush-loads abandon public transit in favor of private cars and ride-hailing services, directly exacerbating road traffic congestion and carbon emissions.
-3. **Zero Capital Expenditure Efficiency:**
-   Constructing a new metro line requires \$80M to \$150M per kilometer and 5–8 years of civil excavation. Pure algorithmic load-balancing across existing public infrastructure unlocks vast latent transit capacity **at zero infrastructure cost**.
-
----
-
-## 3. System Architecture & The Role of Software Engineering
-
-The project follows a **4-Tier Modular Model-View-Controller (MVC)** architectural pattern designed with strict separation of concerns, high cohesion, and low coupling.
-
-```
-                      +---------------------------------------+
-                      |   Commuter Web / Mobile Client (View) |
-                      |    Streamlit Interactive Dashboard    |
-                      +-------------------+-------------------+
-                                          |
-                                          v  [HTTP / REST Query]
-                      +---------------------------------------+
-                      |    Transit Routing Controller Engine  |
-                      |   Multi-Objective Pareto Dijkstra     |
-                      +---------+-------------------+---------+
-                                |                   |
-               [Route Queries]  v                   v  [Congestion Forecast]
-      +-----------------------------+   +------------------------------------+
-      |  Graph Topology Builder     |   |  ML Crowd Prediction Engine (GBR)  |
-      |  NetworkX MultiDiGraph      |   |  Cyclical Time Features (Sin/Cos)  |
-      +--------------+--------------+   +-----------------+------------------+
-                     |                                    |
-                     v                                    v
-      +----------------------------------------------------------------------+
-      |                  Data Ingestion & Validation Layer                   |
-      |          stations.csv  |  routes.csv  |  historical_crowd.csv        |
-      +----------------------------------------------------------------------+
+```text
+Synthetic history CSV -> validation -> cyclic scenario features -> selected regressor
+Station/route CSV -> MultiDiGraph -> station/line weighted Dijkstra -> comparison -> Streamlit
 ```
 
-### What was the Role of Software Engineering (SE) Here?
-- **IEEE 830 Specification Rigor:** Formulated unambiguous functional requirements (FR-01 through FR-06) and non-functional requirements (NFR-01 through NFR-05) linked via a Requirement Traceability Matrix (RTM).
-- **Test-Driven Verification (TDD):** Created automated unit, algorithmic, and integration tests with Pytest covering schema validation, Dijkstra optimality, and fault-injection edge cases (12/12 passing).
-- **Formal Software Testing (ST) Stopping Criteria:** Implemented Harlan Mills fault-seeding models, Musa failure-intensity criteria, and statement/branch coverage thresholds ($\ge 90\%$) to determine when to conclude testing.
-- **Defensive Algorithmic Engineering:** Identified and resolved a subtle Python priority queue tie-breaking bug (`dict < dict` TypeError in `heapq`) by embedding monotonic sequence counters into the heap state tuple `(cost, counter, node, line, path)`.
+The UI selects origin, destination, hour, weekday, weather, event and preference. It displays every station prediction, both itineraries, duration including transfers, average/max congestion, high-station counts, signed reduction and time delta. An interactive native Streamlit/Altair network chart supports pan, zoom and hover without external map tiles or CDNs.
 
----
+## Install and run
 
-## 4. Why That Approach? (Engineering Trade-Offs & Justification)
+Use Python 3.11. Windows PowerShell:
 
-| Engineering Dimension | Chosen Technical Approach | Alternative Considered | Engineering Justification ("Why That Choice?") |
-| :--- | :--- | :--- | :--- |
-| **Routing Algorithm** | **Multi-Objective Dijkstra with Pareto Cost Penalty** | Naive Dijkstra / Deep Reinforcement Learning (RL) | Naive Dijkstra ignores crowding. Deep RL suffers from training instability, black-box non-determinism, and slow convergence. Multi-Objective Dijkstra gives **provably optimal, sub-15ms deterministic paths** with complexity $\mathcal{O}(E + V \log V)$. |
-| **Prediction Model** | **Gradient Boosting Regressor (GBR) + Cyclical Sine/Cosine Features** | Simple Moving Average / Deep LSTM Network | Moving averages fail during abrupt rain/event surges. LSTMs require heavy GPU overhead and 50x inference latency for marginal accuracy gains on tabular data. GBR achieves **$R^2 = 0.9730$ at $< 1.5\text{ ms}$ CPU latency**. |
-| **Graph Representation** | **NetworkX `MultiDiGraph` (Adjacency List)** | 2D Adjacency Matrix | Urban transit networks are sparse ($|E| \approx 2|V|$). An adjacency matrix consumes $\mathcal{O}(V^2)$ memory and cannot represent parallel transit lines (Metro Red Line + Bus B1 on the same corridor). `MultiDiGraph` consumes **$\mathcal{O}(V+E)$ space**. |
-| **Crowd Discomfort Model** | **Piecewise Non-linear Quadratic Curve** | Simple Linear Multiplier | Human crowding perception is non-linear: below 35% capacity, boarding delay is zero; above 70%, platform queues and boarding failures escalate quadratically. |
-| **Temporal Encoding** | **Trigonometric Sine/Cosine Transformation** | Raw Integer Hour (0 to 23) | Raw integer hours introduce an artificial discontinuity between 23:59 and 00:00 (distance of 23 instead of 1). $\sin(2\pi h / 24)$ and $\cos(2\pi h / 24)$ ensure smooth continuous cyclic boundaries. |
-
----
-
-## 5. Significant Outcomes & Empirical Results
-
-We benchmarked the system across **22,800 historical station-hour sensor samples** and simulated peak morning rush-hour routing across Lucknow's multi-modal transit network (Metro Red/Blue/Green Lines and Express Bus Feeder routes):
-
-### Key Empirical Metrics:
-- **Platform Crowd Exposure Reduction:** **38.4% reduction** in average passenger congestion exposure.
-- **Severe Bottlenecks Avoided:** **100% of severe platform crush points** ($\ge 70\%$ capacity, e.g. Central Hub at 8:30 AM) successfully bypassed.
-- **Commuter Travel Time Delta:** Net travel time difference maintained within **$+2.8\text{ minutes}$**, an unnoticeable variance that commuters gladly trade for an empty seat and zero crush delay.
-- **Machine Learning Predictive Accuracy:**
-  - **$R^2$ Variance Explained:** **`0.9730`** (Production GBR model)
-  - **Root Mean Squared Error (RMSE):** **`0.0125`**
-  - **Mean Absolute Error (MAE):** **`0.0085`**
-  - **Mean Absolute Percentage Error (MAPE):** **`6.72%`**
-
----
-
-## 6. Innovation & Why Different from Others
-
-> **Professor's Requirement:** *"Justify not a general or ChatGPT wrapper."*
-
-1. **Authentic Mathematical Cost Formulation:**
-   $$\text{Cost}(e) = w_t \cdot T(e) + w_c \cdot P(\hat{\rho}_v) + w_x \cdot \text{TransferPenalty}$$
-   Unlike LLM-based trip planners that guess schedules using hallucinations, this system runs deterministic graph optimization over verified multi-modal network geometry.
-2. **Nonlinear Piecewise Discomfort Modeling:**
-   $$P(\rho) = \begin{cases} 0 & \text{if } \rho \le 0.35 \\ (\rho - 0.35) \times 8.0 & \text{if } 0.35 < \rho \le 0.70 \\ 2.8 + (\rho - 0.70)^2 \times 35.0 & \text{if } \rho > 0.70 \end{cases}$$
-3. **Interactive Commuter Comfort Dial:**
-   Commuters can personalize their routing tradeoff in real time via a single slider ($w_c \in [0.0, 2.5]$), choosing between the absolute fastest commute vs. a relaxed journey with guaranteed seating.
-
----
-
-## 7. Software Testing (ST) Strategy & Stopping Criteria
-
-> **Professor's Requirement:** *"When to stop ST [selection methods] | What tool to use for ST"*
-
-### 7.1 What Tools to Use for Software Testing?
-- **Pytest (v9.2.0):** Automated test framework executing parameterized fixtures, schema validations, and end-to-end integration pipelines.
-- **Synthetic Anomaly Injection Harness:** Automated generators simulating extreme storm surges (99% crowd index), missing sensor payloads, and disconnected graph components.
-
-### 7.2 Test Case Selection Methods
-1. **Equivalence Partitioning:** Congestion domain partitioned into Low $[0.0, 0.35]$, Moderate $[0.35, 0.70]$, and Severe $[0.70, 1.0]$.
-2. **Boundary Value Analysis (BVA):** Boundary probes at $\rho = 0.35$, $\rho = 0.70$, hour $= 0$ vs $23$, and identity route ($Origin == Destination$).
-3. **Cause-Effect Graphing:** Combinatorial tests of Rush Hour $\times$ Weather Condition $\times$ Special Events.
-4. **Basis Path Testing:** Cyclomatic complexity coverage across all branches of Dijkstra relaxation and transfer tie-breaking.
-
-### 7.3 When to Stop Software Testing (Stopping Criteria)
-Testing was formally concluded based on four established Software Engineering stopping criteria:
-1. **Coverage-Based Criterion:** Achieved **100% pass rate across 12 automated test suites** spanning all modules with statement/branch coverage $> 90\%$.
-2. **Harlan Mills Fault-Seeding Model:** Artificial mutants (e.g. inverted tie-breakers, null line keys) were seeded into routing and data layers; 100% of seeded faults were successfully trapped.
-3. **Musa Failure Intensity Criterion:** Testing ceased when failure frequency fell below $\lambda < 0.001$ failures per 10,000 synthetic route requests.
-4. **Milestone Schedule Gate:** Final verification sign-off completed ahead of the November 25, 2026 academic delivery gate.
-
----
-
-## 8. Project Directory Structure
-
-```
-smart-transport-system/
-├── README.md                     # Comprehensive technical documentation & benchmarks
-├── requirements.txt              # Production Python package dependencies
-├── pytest.ini                    # Pytest configuration and root directory anchor
-├── SRC/                          # Source code package
-│   ├── __init__.py
-│   ├── config.py                 # System paths, hyperparameter weights, thresholds
-│   ├── pipeline/                 # Data ingestion & schema validation
-│   │   ├── __init__.py
-│   │   └── data_loader.py        # CSV parsing & bidirectional edge construction
-│   ├── model/                    # ML crowd prediction engine
-│   │   ├── __init__.py
-│   │   ├── crowd_predictor.py    # Feature engineering (sin/cos) & GBR/RF regressor
-│   │   ├── train.py              # CLI training script & benchmark logger
-│   │   └── artifacts/            # Exported model weights (crowd_predictor.pkl)
-│   ├── routing/                  # Multi-objective graph routing engine
-│   │   ├── __init__.py
-│   │   ├── cost_functions.py     # Pareto cost and non-linear crowd penalty curves
-│   │   ├── graph_builder.py      # NetworkX MultiDiGraph transit network generator
-│   │   └── router.py             # SmartTransitRouter (Naive vs Crowd-Aware Pareto)
-│   └── ui/                       # Streamlit web user interface
-│       ├── __init__.py
-│       └── app.py                # Dashboard with GIS Folium map and KPI decision cards
-├── data/                         # Transit datasets & generator
-│   ├── stations.csv              # Station master data (coordinates, capacity, zones)
-│   ├── routes.csv                # Multi-modal rail/bus route connections
-│   ├── historical_crowd.csv      # 22,800 historical hourly sensor tap records
-│   └── generate_dataset.py       # Reproducible time-series simulation generator
-├── tests/                        # Automated Pytest test suite
-│   ├── __init__.py
-│   ├── test_data_loader.py       # Schema and coordinate validity tests
-│   ├── test_model.py             # Feature engineering & ML regression unit tests
-│   ├── test_routing.py           # Multi-objective Dijkstra and diversion unit tests
-│   └── test_integration.py       # End-to-end full system pipeline integration test
-└── docs/                         # Academic and engineering deliverables
-    ├── SRS.pdf                   # Formal IEEE 830 Software Requirements Specification
-    ├── PPT.pdf                   # Professional 5-Slide Presentation Deck
-    ├── presentation.pptx         # Editable Microsoft PowerPoint slide deck
-    ├── generate_srs_pdf.py       # Automated ReportLab script for SRS.pdf
-    ├── generate_ppt_pdf.py       # Automated ReportLab script for PPT.pdf (5 slides)
-    └── generate_presentation_pptx.py # Python-pptx generator for presentation.pptx
+```powershell
+git clone https://github.com/oceankesarwani/Smart-transport-system.git
+cd Smart-transport-system
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m src.model.train
+.\.venv\Scripts\python.exe -m streamlit run src/ui/app.py
 ```
 
----
+Linux/macOS:
 
-## 9. Installation & How to Run
-
-### Step 1: Clone the Repository & Enter Directory
 ```bash
-git clone <your-github-repo-link>
-cd smart-transport-system
+python3.11 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m src.model.train
+.venv/bin/python -m streamlit run src/ui/app.py
 ```
 
-### Step 2: Install Dependencies
+Once the environment is activated, the commands below use `python`. The app needs no paid services, credentials or network access after installation. If an artifact is missing/incompatible, the UI shows the training command. Only load the trusted repository artifact or your own retrained file.
+
+## Data and model reproduction
+
 ```bash
-pip install -r requirements.txt
+python data/generate_dataset.py
+python -m src.model.train
+python quick_check.py
 ```
 
-### Step 3: Train / Benchmark the ML Model
+The seed-42 generator uses assumed station/time factors, weather, events and random noise. It creates 60 days from 2026-09-20 to 2026-11-18, 19 hours per day. It does not ingest sensors or surveys. Training sorts timestamp and station, then splits complete days 60/20/20 (13,680/4,560/4,560 rows). Features are cyclical hour/day, weekend, derived peak, one-hot station/weather, and event. Inflow, outflow, target, congestion category and generated delay are excluded. Weather and event inputs are hypothetical known scenarios.
+
+Historical mean, Ridge, Random Forest and Gradient Boosting compete on validation RMSE. The selected architecture is refitted on train+validation, then evaluated once on final held-out dates. Random seeds and model parameters are fixed in code. The artifact stores a schema and Scikit-learn version.
+
+Selected model: **Random Forest**. Held-out synthetic test: MAE **0.008378**, RMSE **0.012473**, R² **0.973181**. See [full model metrics](results/model_metrics.json). This measures this simulator, not real-world prediction accuracy.
+
+## Routing and engineering trade-offs
+
+For edge e ending at v, the weighted cost is:
+
+```text
+base_minutes(e) + 4 * line_change + 2.5 * preference * P(predicted_congestion(v))
+P(rho) = 0                          if rho <= 0.35
+         8 * (rho - 0.35)          if 0.35 < rho <= 0.70
+         2.8 + 35*(rho-0.70)^2     if rho > 0.70
+```
+
+This continuous nondecreasing curve is an assumed discomfort penalty, not measured delay. All inputs are checked for finite, non-negative cost domains. The baseline sets preference to zero with identical transfer assumptions. Total duration includes a 4-minute allowance per line change, with no initial waiting time.
+
+Weighted-sum Dijkstra is not Pareto-front search. State is `(station,last_line)` so parallel lines and transfer choices remain correct. The heap counter safely breaks equal-cost ties. An adjacency list supports sparse parallel routes in O(V+E) storage. BFS cannot handle unequal costs; A* would need a justified admissible heuristic; reinforcement learning adds unnecessary training complexity here. Modular components isolate validation, ML, graph search and UI. Cyclical time features remove clock wrap discontinuities. The selected model is justified by validation results rather than a preselected claim.
+
+For S expanded states and A expanded transitions, lazy-heap search is O(A log A), plus O(A*S) time and memory from copied path lists in this implementation. S is at most 1+V*L; A at most E*(L+1). These bounds include station/line expansion and path storage. A future predecessor-link implementation could reduce memory.
+
+## Reproducible route experiments
+
 ```bash
-python SRC/model/train.py
+python -m scripts.benchmark
 ```
-*Expected Output:* Benchmarks Ridge vs. Random Forest vs. Gradient Boosting, logs RMSE and $R^2$ scores, and exports `crowd_predictor.pkl` to `SRC/model/artifacts/`.
 
-### Step 4: Run the Automated Pytest Suite
+The predefined full grid includes 7 regimes (morning, evening, off-peak, weekend, rain, storm, event), every 380 ordered distinct station pair, and preferences 0/1/2/5: **10,640 comparisons**. No unfavorable rows are discarded. [CSV](results/routing_benchmark.csv), [summary](results/routing_summary.json).
+
+| Measurement | Actual simulation result |
+|---|---:|
+| Cases with lower average exposure | 4.02% |
+| Cases with equal exposure | 95.67% |
+| Cases with worse exposure | 0.31% |
+| Unchanged itineraries | 95.67% |
+| Mean per-query signed reduction | 0.333% |
+| Mean additional duration | 0.186 min |
+| Mean route-pair timing, excludes prediction | 0.909 ms |
+| 95th percentile route-pair timing | 2.173 ms |
+| Mean network prediction across seven batches | 23.157 ms |
+
+Timing values are local single-run measurements and will vary. Mean percentage reduction averages the individual ratios. It differs from reduction in aggregate mean exposure.
+
+![Full-grid simulated comparison](results/routing_comparison.png)
+
+**Reliable demonstration:** S04 → S14, Thursday, 18:00, Storm, event off, preference 2. Baseline S04→S01→S12→S14: 22 min, exposure 0.405926. Recommendation S04→S18→S15→S14: 25 min, exposure 0.322975. Signed reduction 20.435%, one transfer in each. No high-congestion station on either route. This is a selected example after evaluating the whole grid, not a typical aggregate gain.
+
+Exposure is arithmetic mean of predicted station congestion including endpoints. Maximum and high-station count (rho>=0.70) use the same visits. Reduction is 100*(baseline-smart)/baseline, signed; a zero baseline returns 0 by convention. Duration is sum(edge minutes)+4*transfers. The optimization minimizes accumulated penalty, so average exposure can worsen. Predictions are one departure-time snapshot.
+
+## Testing and stopping decision
+
 ```bash
-python -m pytest -c pytest.ini --rootdir=. tests/ -v
+python -m pytest --cov=src.pipeline --cov=src.model --cov=src.routing --cov-branch --cov-fail-under=90 --cov-report=json:results/coverage.json --junitxml=results/junit.xml
 ```
-*Expected Output:* `12 passed in ~9s (100% pass rate)`.
 
-### Step 5: Launch the Interactive Web Dashboard
+Actual recorded suite: **74 passed**. Statement coverage **93.62%**, branch coverage **95.00%**, combined **94.02%**. Routing and cost functions have 100% statement/branch coverage. Denominator includes ingestion, prediction, routing and the training CLI module; UI/build/benchmark scripts and legacy source are excluded. [Coverage](results/coverage.json), [JUnit](results/junit.xml), [per-test report](results/test_report.csv).
+
+Selection methods: equivalence partitioning (valid/invalid inputs), boundary value analysis (thresholds/hour endpoints/zero weight), transfer/preference decision tables, error guessing (NaN, broken artifacts, missing/duplicate data), branch and independent routing paths. Random controlled graphs are cross-checked against a separately constructed NetworkX station/line graph. Streamlit AppTest covers render and user interaction. Regression cases cover every significant fixed routing/model defect.
+
+Exit criteria: all required cases pass; no known critical/high unresolved defect; >=90% statement coverage of measured core; meaningful routing/cost branch coverage; all eight FRs traced; complete app workflow; reproducible benchmark; verified setup and documents. See [test decision](docs/TEST_REPORT.md) and SRS. No Harlan Mills fault-seeding or Musa failure-intensity experiment is claimed.
+
+CI runs the same training, coverage suite and benchmark on Windows and Ubuntu. Check the actual remote run before claiming it is green. The development process used baseline reproduction, incremental fixes and regression tests, not a claim of having followed TDD from the project's start.
+
+## Documentation and generation
+
+- [SRS PDF](docs/SRS.pdf), [editable Word](docs/SRS.docx), [editable text](docs/SRS.md)
+- [Exactly five-slide presentation](docs/presentation.pptx), [presentation PDF](docs/PPT.pdf)
+- [Viva preparation](docs/VIVA_PREPARATION.md), [demo and 10-minute script](docs/DEMO_SCRIPT.md)
+- [Audit and baseline failures](docs/AUDIT.md), [test report](docs/TEST_REPORT.md)
+
 ```bash
-streamlit run SRC/ui/app.py
+python -m scripts.build_diagrams
+python -m scripts.build_documents
+python -m scripts.build_guides
+python -m scripts.build_slides
 ```
-Opens the interactive browser dashboard where you can:
-- Select Origin and Destination stations across Lucknow's multi-modal transit network.
-- Toggle Rush Hour scenarios (Morning 8:30 AM vs Evening 18:30 PM vs Off-Peak).
-- Adjust the Commuter Comfort Priority slider to observe real-time dynamic rerouting.
-- Inspect the interactive Folium GIS map showing color-coded station bottlenecks.
 
----
+The SRS builder uses python-docx/ReportLab and reads measured JSON/CSV. The editable deck is authored with the Codex bundled Artifact Tool. `scripts/build_slides.py` locates that runtime or accepts `CODEX_ARTIFACT_RUNTIME`; its JS source and slide content are committed. On Windows, run `powershell -File scripts/export_office.ps1 -RenderSrs` to export the five-slide PDF and verify the DOCX through installed Microsoft Office. On Linux with LibreOffice, use `libreoffice --headless --convert-to pdf --outdir tmp/render docs/presentation.pptx` and copy the resulting PDF to docs/PPT.pdf. The checked-in files are ready to present without regeneration or Codex.
 
-## 10. Presentation & SRS Deliverables
+## Repository layout
 
-All documentation deliverables required for evaluation are pre-compiled and located in the `docs/` folder:
-- **`docs/SRS.pdf`**: Complete IEEE 830 standard Software Requirements Specification (including System Scope, Use Cases, Functional & Non-Functional Specifications, and Testing Stopping Criteria).
-- **`docs/PPT.pdf`**: Exactly **5 slides max** in 16:9 widescreen format, addressing:
-  - **Slide 1:** Title & Pinpointed Core Problem Statement (Zero side problems).
-  - **Slide 2:** Motivation / Why That Problem? (Quantified transit dwell crisis).
-  - **Slide 3:** System Approach & The Role of Software Engineering (MVC Architecture, TDD).
-  - **Slide 4:** Why That Approach? (Engineering Trade-Offs & Technical Justifications).
-  - **Slide 5:** Outcomes, Innovation & Cross-Questioning Defense.
-- **`docs/presentation.pptx`**: Fully editable Microsoft PowerPoint deck for presentation delivery.
+```text
+src/pipeline/      validated CSV ingestion
+src/model/         features, candidate selection and persistence
+src/routing/       graph, cost, line-state search and metrics
+src/ui/app.py      authoritative dashboard
+app/               forwarding compatibility entrypoint
+data/              synthetic history, illustrative topology, generator
+models/            current versioned local predictor
+scripts/           benchmark and reproducible artifact builders
+tests/             authoritative acceptance and regression suite
+results/           machine-readable experiment/test evidence and charts
+docs/              SRS, five-slide deck, viva and demo
+legacy/            preserved alternative source, tests and old artifacts
+```
 
----
+## Limitations
 
-*Developed with mathematical rigor and adherence to IEEE Software Engineering standards.*
+Small synthetic network and patterns, mostly below the high-congestion threshold; no operational generalization shown. Scenario weather/events are assumptions. The model does not consider timetables, changing crowd along the trip, capacity constraints or missed boarding. Preference has no maximum-detour guarantee. The objective differs from mean exposure, and adverse cases are reported. Meaningful deployment requires observed data, calibrated penalties and external validation. This is custom numerical prediction and graph search, with no LLM or ChatGPT API.

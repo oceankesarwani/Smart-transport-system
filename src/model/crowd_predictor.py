@@ -77,6 +77,9 @@ class CrowdPredictor:
             dates = pd.to_datetime(train_df.timestamp).dt.normalize()
             boundary = sorted(dates.unique())[int(len(dates.unique())*.8)]
             validation_df, train_df = train_df[dates >= boundary], train_df[dates < boundary]
+        if not (pd.to_datetime(train_df.timestamp).max() < pd.to_datetime(validation_df.timestamp).min()
+                and pd.to_datetime(validation_df.timestamp).max() < pd.to_datetime(test_df.timestamp).min()):
+            raise ValueError('Training, validation and test must have disjoint chronological periods')
         xt = self._engineer_features(train_df, True)
         xv = self._engineer_features(validation_df)
         candidates = {

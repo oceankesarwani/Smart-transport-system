@@ -11,3 +11,9 @@ Verified defects in B: uppercase imports and artifact paths; validation absent f
 Existing config contributor records retained. Fictional lines and all historical samples are simulation, not verified transit services or sensors.
 
 Pristine baseline extracted from Git commit 27afae7 and collected after dependency installation: 27 tests collected, 2 import errors (uppercase SRC in data loader and integration imports). See results/baseline_collection.txt. First corrected-suite run: 71 passed and one test assertion failed because it expected nine Streamlit metric widgets while the UI deliberately has five and reports remaining values as text. Assertion corrected to match required displayed metrics.
+
+Clean virtual-environment system smoke exposed a new transitive dependency incompatibility: latest PyArrow required NumPy >=2, whereas project NumPy is pinned to 1.26.4. The preinstalled environment had working PyArrow 23.0.1. Pin PyArrow 23.0.1 explicitly and rerun clean-environment system tests; pip check alone did not detect this runtime import requirement.
+
+Remote CI at bfb982f reproduced the same PyArrow/NumPy error on Ubuntu; its Windows matrix job was cancelled by fail-fast. This is a failed intermediate milestone, not a final green claim. Final dependency pins and the expanded 74-case suite must be checked on a new remote run.
+
+Office artifact tooling: packaged render_docx.py failed because soffice.exe is not installed. Installed Microsoft Word exported the editable SRS for visual verification instead. Artifact Tool successfully exported and structurally/import-validated five slides, but its Windows WASM host can abort during shutdown with 0xC0000409. The wrapper only accepts that exact post-export code when a fresh success receipt matches the final file SHA-256, layout, import and slide count. All other failures remain errors.

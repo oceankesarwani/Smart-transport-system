@@ -38,3 +38,7 @@ coverage.xml
 .env
 *.key
 *.pem
+
+!results/coverage.json
+node_modules/
+.codex-finalizer/
