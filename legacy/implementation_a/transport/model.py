@@ -55,15 +55,19 @@ class CrowdModelManager:
         lr_acc = accuracy_score(y_test, lr_preds)
         lr_f1 = f1_score(y_test, lr_preds, average="macro", zero_division=0)
 
-        # 3. Production Model: Random Forest with GridSearchCV tuning
-        rf = RandomForestClassifier(random_state=self.config["model"]["random_state"], n_jobs=-1)
+        # 3. Production Model: Random Forest with fast GridSearchCV tuning
         param_grid = self.config["model"]["rf_param_grid"]
-        cv = StratifiedKFold(n_splits=self.config["model"]["cv_folds"], shuffle=True, random_state=42)
+        tune_sample_size = min(6000, len(X_train))
+        tune_indices = np.random.RandomState(42).choice(len(X_train), size=tune_sample_size, replace=False)
+        X_tune, y_tune = X_train[tune_indices], y_train[tune_indices]
 
-        grid_search = GridSearchCV(rf, param_grid, cv=cv, scoring="f1_macro", n_jobs=-1)
-        grid_search.fit(X_train, y_train)
+        rf_base = RandomForestClassifier(random_state=self.config["model"]["random_state"], n_jobs=-1)
+        cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+        grid_search = GridSearchCV(rf_base, param_grid, cv=cv, scoring="f1_macro", n_jobs=-1)
+        grid_search.fit(X_tune, y_tune)
 
-        best_rf = grid_search.best_estimator_
+        best_rf = RandomForestClassifier(**grid_search.best_params_, random_state=self.config["model"]["random_state"], n_jobs=-1)
+        best_rf.fit(X_train, y_train)
         rf_preds = best_rf.predict(X_test)
 
         rf_acc = accuracy_score(y_test, rf_preds)

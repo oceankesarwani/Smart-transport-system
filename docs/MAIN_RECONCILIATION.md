@@ -1,0 +1,3 @@
+# Main reconciliation
+
+Merged contributor commit 159ac4d without rewriting history. Its lowercase import fixes are present in the supported implementation. Its revised classifier artifact and classifier source were merged into the preserved implementation A archive. Its complete UI is retained at legacy/contributor_ui_159ac4d.py. The production UI retains the tested prediction, transfer and signed metric calculations, and receives the requested Hallmark custom design separately. The contributor UI uses glass/gradients, outdated model descriptions and fallback metrics, conflicting with the explicit final submission design and evidence requirements; those behaviours are not adopted into production.
