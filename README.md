@@ -57,7 +57,7 @@ The seed-42 generator uses assumed station/time factors, weather, events and ran
 
 Historical mean, Ridge, Random Forest and Gradient Boosting compete on validation RMSE. The selected architecture is refitted on train+validation, then evaluated once on final held-out dates. Random seeds and model parameters are fixed in code. The artifact stores a schema and Scikit-learn version.
 
-Selected model: **Random Forest**. Held-out synthetic test: MAE **0.008378**, RMSE **0.012473**, R² **0.973181**. See [full model metrics](results/model_metrics.json). This measures this simulator, not real-world prediction accuracy.
+Selected model: Random Forest. Held-out synthetic test: MAE 0.008375, RMSE 0.012464, R² 0.973217. These results measure prediction accuracy on the synthetic dataset and do not establish real-world prediction accuracy.
 
 ## Routing and engineering trade-offs
 
